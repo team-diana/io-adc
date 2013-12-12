@@ -1,0 +1,13 @@
+string message
+int16 x1
+int16 z1
+int16 x2
+int16 z2
+int16 x3
+int16 z3
+int16 x4
+int16 z4
+float64 sosp1
+float64 sosp2
+float64 sosp3
+float64 sosp4
