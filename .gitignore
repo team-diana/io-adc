@@ -14,3 +14,9 @@ devel/*
 # osx fix
 .DS_Store
 
+*/cfg/cpp
+
+
+src/imu_filter_madgwick/cfg/cpp/
+src/imu_filter_madgwick/src/imu_filter_madgwick/
+#
