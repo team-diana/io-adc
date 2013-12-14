@@ -593,7 +593,7 @@ int main(int argc, char **argv)
                 double maxValue = 32768;
                 double vRef = max_voltage;
               
-                if ((Startup)||false) {
+                if ((Startup)&&false) {
                    switch(i)
                    {
                         case 10:
@@ -672,24 +672,24 @@ int main(int argc, char **argv)
                    
                 }
                 else
-                    {
-                    cal_offset[10]=21000;
-                    cal_offset[11]=21000;
-                    cal_offset[12]=21000;
-                    cal_offset[13]=21000;
-                    cal_offset[14]=21000;
-                    cal_offset[15]=21000;
-                    cal_offset[16]=21000;
-                    cal_offset[17]=21000;
-                    }
+                {
+                    cal_offset[10]=21362;
+                    cal_offset[11]=23414;
+                    cal_offset[12]=20777;
+                    cal_offset[13]=21824;
+                    cal_offset[14]=21557;
+                    cal_offset[15]=22494;
+                    cal_offset[16]=20879;
+                    cal_offset[17]=22802;
+                }
               
-              double zeroRateV =  cal_offset[i] * vRef / maxValue;
-              double sensitivity = 0.800/9.7803084; //800mv/g  [V/ m/s^2]
-              chan_voltage[i-10] = (chan_data_raw[i-10] * vRef / maxValue - zeroRateV) / sensitivity;
-       			  ROS_INFO("raw %i: %i", i ,chan_data_raw[i-10]);
-       			  ROS_INFO("tensione %i (V): %f", i ,chan_data_raw[i-10] * vRef / maxValue);
-       			  ROS_INFO("accelerazione (x,z) %i (m/s^2): %f", i ,chan_voltage[i-10]);
-                  ROS_INFO("accelerazione y (m/s^2): %f", rover_y);
+                double zeroRateV =  cal_offset[i] * vRef / maxValue;
+                double sensitivity = 0.800/9.7803084; //800mv/g  [V/ m/s^2]
+                chan_voltage[i-10] = (chan_data_raw[i-10] * vRef / maxValue - zeroRateV) / sensitivity;
+       			ROS_INFO("raw %i: %i", i ,chan_data_raw[i-10]);
+       		    ROS_INFO("tensione %i (V): %f", i ,chan_data_raw[i-10] * vRef / maxValue);
+       		    ROS_INFO("accelerazione (x,z) %i (m/s^2): %f", i ,chan_voltage[i-10]);
+                ROS_INFO("accelerazione y (m/s^2): %f", rover_y);
 
          }
          
@@ -1077,8 +1077,8 @@ int main(int argc, char **argv)
     {
         Startup=false;
         //for(int i=10 ; i<10+Chan_sosp; i++ )
-        //   ROS_INFO("%d  -  %f",i,cal_offset[i])
-        //return(0)
+        //   ROS_INFO("%d  -  %f",i,cal_offset[i]);
+        //return(0);
     }
     
     ros::spinOnce();
