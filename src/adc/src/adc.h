@@ -1,3 +1,12 @@
+// Software License Agreement (BSD License)
+//
+// Copyright (c) 2013, Tamer Saadeh
+// <tamer@tamersaadeh.com>
+// based on work by Mattia Marenco
+// <mattia.marenco@teamdiana.org>
+//
+// All rights reserved.
+
 #ifndef _ADC_H
 #define _ADC_H
 
