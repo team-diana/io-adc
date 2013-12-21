@@ -160,7 +160,18 @@ void updateImuState(sensor_msgs::Imu& imuMsg, I16 chan_data_raw, int i, boost::c
     }
 }
 
-
+/**
+ *
+ *  Sets the /moving ROS topic values of the rover
+ *
+ *  Parameters:
+ *      req: service request??
+ *      res: service respone??
+ *
+ *  Returns:
+ *      true: for successful publishing
+ *      fails: otherwise
+ */
 bool movingStatus(adc::movingService::Request &req, adc::movingService::Response &res)
 {
      isMoving = req.status;
