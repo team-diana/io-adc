@@ -151,66 +151,66 @@ void updateImuState(sensor_msgs::Imu& imuMsg, I16 chan_data_raw, int i, boost::c
     double linear_acceleration;
     double angular_velocity;
     double g;
-    
+
     if (((!isMoving) && (i < 3)) || (startup)) {
         calibration.push_back(float(chan_data_raw));
         double total = 0;
-        
+
         BOOST_FOREACH (float reading, calibration) {
             total += reading;
         }
         calibrationOffset[i] = total / calibration.size();
         ROS_INFO("Calibration channel %d", i);
     }
-    
+
     // accelerometer
     if (i >= 3) {
         double zeroRateV = AG_ZERO_RATE_VOLTAGE;
         double sensitivity;
-        
+
         //IMU1
         if (i == 5) {
             zeroRateV -= IMU1_G;
         }
-        
+
         //su asse z aggiungo la g
         if (i <= 5) {
             sensitivity = IMU1_G / G_CONSTANT; //300mv/g  [V/ m/s^2]
         }
-        
+
         //IMU2
         if (i == 8) {
             zeroRateV -= IMU2_G;
         }
-        
+
         //su asse z aggiungo la g
         if ((i > 5) && (i <= 8)) {
             sensitivity = IMU2_G / G_CONSTANT; //800mv/g  [V/ m/s^2]
         }
-        
+
         linear_acceleration = (chan_data_raw * AG_REF_VOLTAGE / AG_MAX_VALUE - zeroRateV) / sensitivity;
     }
-    
+
     // gyroscope
     if (i < 3) {
         double sensitivity = RAD_TO_DEG(0.00333); //3.33mv/°/s  [V/rad/s]
         angular_velocity = (chan_data_raw * AG_REF_VOLTAGE / AG_MAX_VALUE - AG_ZERO_RATE_VOLTAGE) / sensitivity;
     }
-    
+
     // add time to the message header
     imuMsg.header.stamp = ros::Time::now();
     switch (i) {
             // Angulare velocity
             // x
-    	case(0):
+        case(0):
             imuMsg.angular_velocity.y = angular_velocity;
             break;
             // y
-    	case(1):
+        case(1):
             imuMsg.angular_velocity.x = -angular_velocity;
             break;
             // z
-    	case(2):
+        case(2):
             imuMsg.angular_velocity.z = angular_velocity;
             break;
             // Linear acceleration
@@ -222,13 +222,13 @@ void updateImuState(sensor_msgs::Imu& imuMsg, I16 chan_data_raw, int i, boost::c
             imuMsg.linear_acceleration.x = linear_acceleration;
             break;
             // y
-    	case(4):
+        case(4):
             rover_y = linear_acceleration;
         case(7):
             imuMsg.linear_acceleration.y = -linear_acceleration;
             break;
             // z
-    	case(5):
+        case(5):
             rover_z = linear_acceleration;
         case(8):
             imuMsg.linear_acceleration.z = linear_acceleration;
@@ -274,11 +274,11 @@ int main(int argc, char **argv)
     std::cout << "start" << std::endl;
     ros::init(argc, argv, "adc");
     ros::NodeHandle n;
-    
+
     // IMU message
     sensor_msgs::Imu imu,imu_2;
     sensor_msgs::Range range;
-    
+
     // What is this?!
     boost::circular_buffer<float> calibration0(140),
     calibration1(CALIBRATION),
@@ -314,11 +314,11 @@ int main(int argc, char **argv)
     calib_sosp5(CALIBRATION),
     calib_sosp6(CALIBRATION),
     calib_sosp7(CALIBRATION);
-    
+
     // Declare variables that can be modified by launch file.
     std::string message;
     int rate;
-    
+
     std::string topic_imu,
     topic_sosp,
     topic_rangef,
@@ -327,35 +327,36 @@ int main(int argc, char **argv)
     topic_rangepd,
     topic_imu_2,
     topic_diag;
-    
+
     int range_imu,
     range_sosp,
     range_range,
     range_imu_2,
     range_diag;
-    
+
     bool enable_imu,
     enable_sosp,
     enable_range,
     filter_imu,
     enable_imu_2,
     enable_diag;
-    
+
     int i;
     char temp_char;
-    
+
     I16 card = -1;
     I16 err;
     I16 dio = -1;
-    
-    I16 chan_data[8];                     // TODO configurare meglio il massimo del buffer
+
+    // TODO configurare meglio il massimo del buffer
+    I16 chan_data[8];
     I16 chan_data_raw[8];
     F32 sosp_data[4];
     F32 chan_voltage[8];
     F32 max_voltage;
     F32 max_voltage_range;
     F32 max_voltage_diag;
-    
+
     // Initialize node parameters from launch file or command line.
     // Use a private node handle so that multiple instances of the node can
     // be run simultaneously while using different parameters.
@@ -380,34 +381,34 @@ int main(int argc, char **argv)
     private_node_handle_.param("topic_diag", topic_diag, std::string("ADC/diag"));
     private_node_handle_.param("range_diag", range_diag, int(2));
     private_node_handle_.param("enable_diag", enable_diag, bool(true));
-    
+
     n.setParam("/moving", bool(false));
     n.setParam("/adc/filtered_imu", bool(false));
-    
+
     if ((card = Register_Card(PCI_9116, 0)) < 0) {
         std::cout <<  "ADC Register_Card error= " <<  card << std::endl;
-		message = "ADC Register_Card error";
+        message = "ADC Register_Card error";
         exit(1);
     }
     
-    if (*err = AI_9116_Config(card, P9116_AI_SingEnded | P9116_AI_UserCMMD, P9116_AI_SoftPolling, 0, 0, 0)) != NoError) {
+    if ((*err = AI_9116_Config(card, P9116_AI_SingEnded | P9116_AI_UserCMMD, P9116_AI_SoftPolling, 0, 0, 0)) != NoError) {
         printf("Config error : error_code: %d \n", err);
         std::stringstream ms;
-		ms << "Config error Error: error_code: " << int(err);
+        ms << "Config error Error: error_code: " << int(err);
         message = ms.str();
     }
-    
+
     if ((dio = Register_Card(PCI_7432, 0)) < 0) {
         std::cout <<  "DIO Register_Card error= " <<  dio << std::endl;
-		message = "DIO Register_Card error";
+        message = "DIO Register_Card error";
         exit(1);
     }
-    
+
     SET_MAX_RANGE(enable_imu || enable_sosp || enable_imu_2, range_imu, max_voltage);
     SET_MAX_RANGE(enable_range, range_range, max_voltage_range);
     SET_MAX_RANGE(enable_diag, range_diag, max_voltage_diag);
-    
-    /*
+
+/*
      
      // This should be implemented in the macro SET_MAX_RANGE
      
@@ -458,7 +459,7 @@ int main(int argc, char **argv)
      }
      
      */
-    
+
     // FIXME: add documentation to the following overall code functionality
     // TODO: config; fill in IMU data (start at 0 orientation)
     imu.orientation = tf::createQuaternionMsgFromYaw(0.0);
@@ -469,7 +470,7 @@ int main(int argc, char **argv)
     std::copy(cov.begin(), cov.end(), imu.orientation_covariance.begin());
     std::copy(cov.begin(), cov.end(), imu.angular_velocity_covariance.begin());
     std::copy(cov2.begin(), cov2.end(), imu.linear_acceleration_covariance.begin());
-    
+
     ros::Publisher imu_adc_pub = n.advertise<adc::imu_Adc>(topic_imu.c_str(), 100);
     ros::Publisher imu_raw_pub = n.advertise<sensor_msgs::Imu>("imu/data_raw", 100);
     ros::Publisher sosp_adc_pub = n.advertise<adc::sosp_Adc>(topic_sosp.c_str(), 100);
@@ -482,10 +483,10 @@ int main(int argc, char **argv)
     ros::Publisher diag_adc_pub = n.advertise<adc::diag_Adc>(topic_diag.c_str(), 100);
     ros::ServiceServer service = n.advertiseService("Moving_Status", movingStatus);
     ROS_INFO("Ready to go.");
-    
+
     // Tell ROS how fast to run this node.
     ros::Rate loop_rate(rate);
-    
+
     // Main loop.
     long int count = 0;
     int count_filtered_imu = 0;
@@ -496,7 +497,7 @@ int main(int argc, char **argv)
             isMoving = false;
             n.setParam("/moving", bool(false));
         }
-        
+
         if (!n.getParam("/adc/filtered_imu", filter_imu)) {
             filter_imu = false;
             n.setParam("/adc/filtered_imu", bool(false));
@@ -505,18 +506,18 @@ int main(int argc, char **argv)
         }
         
         if ((enable_imu) && (count_range < RANGE_MAX)) {
-        	for (int i = 0; i < Chan_IMU; i++) {
+            for (int i = 0; i < Chan_IMU; i++) {
                 if ((err = AI_ReadChannel(card, i, range_imu, (U16*) &chan_data_raw[i])) != NoError) {
                     printf("AI_ReadChannel Ch#%d error : error_code: %d \n", i, err);
                     std::stringstream ms;
-        			ms << "AI_ReadChannel Error Ch#" << i << " error : error_code: " << int(err);
+                    ms << "AI_ReadChannel Error Ch#" << i << " error : error_code: " << int(err);
                     message = ms.str();
-        		}
-                
+                }
+
                 chan_data[i] = chan_data_raw[i];
                 chan_voltage[i] = (((F32) chan_data[i]) / AG_MAX_VALUE) * max_voltage;
                 chan_data[i] = int(chan_voltage[i] * 1000);
-                
+
                 double total = 0.0;
                 I16 cdata = chan_data_raw[i];
                 switch (i) {
@@ -540,7 +541,7 @@ int main(int argc, char **argv)
                         break;
                 }
             }
-            
+
             if (filter_imu){
                 if (count_filtered_imu >= SAMPLE_FILTERED_EVERY) {
                     count_filtered_imu = 1;
@@ -553,7 +554,7 @@ int main(int argc, char **argv)
                 imu_raw_pub.publish(imu);
                 ROS_INFO("%s", "sending IMU");
             }
-            
+
             // Create the IMU message and publish it
             adc::imu_Adc msg;
             msg.message = message;
@@ -565,21 +566,20 @@ int main(int argc, char **argv)
             msg.az = chan_data[5];
             imu_adc_pub.publish(msg);
         }
-        
+
         if ((enable_sosp) && (count_range < RANGE_MAX)) {
             for (int i = 0; i < Chan_sosp; i++) {
                 if ((err = AI_ReadChannel(card, i + 10, range_sosp, (U16*) &chan_data_raw[i])) != NoError) {
                     printf(" AI_ReadChannel Ch#%d error : error_code: %d \n", i + 10, err );
                     std::stringstream ms;
-           			ms << "AI_ReadChannel Error Ch#" << i + 10 << " error : error_code: " << int(err);
+                    ms << "AI_ReadChannel Error Ch#" << i + 10 << " error : error_code: " << int(err);
                     message = ms.str();
                 }
-                
+
                 double total = 0;
                 double vRef = max_voltage;
-                
-                // FIXME: this is never entered!
-                /*
+
+/* FIXME: this is never entered!
                  if ((Startup)&&false) {
                  switch(i)
                  {
@@ -660,21 +660,19 @@ int main(int argc, char **argv)
                  }
                  else
                  {
-                 */
-                
-                /*
+                 
                  }
                  */
-                
+
                 double zeroRateV =  calibrationOffset[i] * vRef / AG_MAX_VALUE;
                 double sensitivity = IMU2_G / G_CONSTANT; //800mv/g  [V/ m/s^2]
                 chan_voltage[i] = (chan_data_raw[i] * vRef / AG_MAX_VALUE - zeroRateV) / sensitivity;
-       			ROS_INFO("raw %i: %i", i + 10, chan_data_raw[i]);
-       		    ROS_INFO("tensione %i (V): %f", i + 10, chan_data_raw[i] * vRef / AG_MAX_VALUE);
-       		    ROS_INFO("accelerazione (x,z) %i (m/s^2): %f", i + 10, chan_voltage[i]);
+                ROS_INFO("raw %i: %i", i + 10, chan_data_raw[i]);
+                ROS_INFO("tensione %i (V): %f", i + 10, chan_data_raw[i] * vRef / AG_MAX_VALUE);
+                ROS_INFO("accelerazione (x,z) %i (m/s^2): %f", i + 10, chan_voltage[i]);
                 ROS_INFO("accelerazione y (m/s^2): %f", rover_y);
             }
-            
+
             // These are 10 selected values from the raw output when the rover is in caibration mode
             calibrationOffset[10] = 21362;
             calibrationOffset[11] = 23414;
@@ -684,7 +682,7 @@ int main(int argc, char **argv)
             calibrationOffset[15] = 22494;
             calibrationOffset[16] = 20879;
             calibrationOffset[17] = 22802;
-            
+
             for (int i = 0; i < Chan_sosp; i += 2) {
                 double sosp_z = -chan_voltage[i];
                 double sosp_x = chan_voltage[i + 1];
@@ -692,15 +690,15 @@ int main(int argc, char **argv)
                 double sign = copysignf(1.0, sosp_z);
                 double roll = atan2(rover_y, sign * sqrt(sosp_x * sosp_x + sosp_z * sosp_z));
                 double pitch = -atan2(sosp_x, sqrt(rover_y * rover_y + sosp_z * sosp_z));
-                
+
                 // offset remove
                 sign = copysignf(1.0, rover_z);
                 roll += atan2(rover_y, sign * sqrt(rover_x * rover_x + rover_z * rover_z));
                 pitch += -atan2(rover_x, sqrt(rover_y * rover_y + rover_z * rover_z)) ;
                 sosp_data[i / 2] = pitch;
-                
+
                 double total = 0.0;
-                
+
                 switch(i / 2) {
                     case 0:
                         PITCH_UPDATE(pitch1);
@@ -717,7 +715,7 @@ int main(int argc, char **argv)
                 }
                 ROS_INFO("inclinazione %d (rad): %f", (i / 2 + 1), pitch);
             }
-            
+
             if (count % SAMPLE_FILTERED_EVERY == 0) {
                 ROS_INFO("%s", "sending suspension");
                 // Create suspension message and publish it
@@ -738,14 +736,14 @@ int main(int argc, char **argv)
                 sosp_adc_pub.publish(msg);
             }
         }
-        
+
         if (enable_range) {
             // FIXME: what is this supposed to do?
             if (count_range == RANGE_MAX) {
                 DO_WriteLine(dio, 0, 0, 0);
                 usleep(50000);
             }
-            
+
             if (count_range >= RANGE_MAX) {
                 if (count % SAMPLE_FILTERED_EVERY == 0) {
                     for (int i = 0; i < Chan_range; i++) {
@@ -755,25 +753,25 @@ int main(int argc, char **argv)
                             ms << "AI_ReadChannel Error Ch#" << i + 6 << " error : error_code: " << int(err);
                             message = ms.str();
                         }
-                        
+
                         chan_data[i] = chan_data_raw[i];
                         chan_voltage[i] = (((F32) chan_data[i]) / AG_MAX_VALUE) * max_voltage_range;
-                        
+
                         F32 cdata;
                         ROS_INFO("%s", "reading Range");
                         // ADC message
                         range.header.stamp = ros::Time::now();
                         range.radiation_type = 1;
                         range.field_of_view = 0.1;
-                        
+
                         F32 range_temp;
                         double total = 0;
-                        
+
                         // FIXME: please explain the constants; all of them
                         switch (i) {
                             case 0:
                                 UPDATE_RANGE(range1);
-                                
+
                                 range.header.frame_id = "Range_Post";
                                 range.min_range = 0.15;
                                 range.max_range = 1.50;
@@ -788,7 +786,7 @@ int main(int argc, char **argv)
                                 break;
                             case 1:
                                 UPDATE_RANGE(range2);
-                                
+
                                 range.header.frame_id = "Range_Post_Down";
                                 range.min_range = 0.03;
                                 range.max_range = 0.40;
@@ -803,7 +801,7 @@ int main(int argc, char **argv)
                                 break;
                             case 2:
                                 UPDATE_RANGE(range3);
-                                
+
                                 range.header.frame_id = "Range_Front";
                                 range.min_range = 0.15;
                                 range.max_range = 1.50;
@@ -818,7 +816,7 @@ int main(int argc, char **argv)
                                 break;
                             case 3:
                                 UPDATE_RANGE(range4);
-                                
+
                                 range.header.frame_id = "Range_Front_Down";
                                 range.min_range = 0.03;
                                 range.max_range = 0.40;
@@ -837,13 +835,13 @@ int main(int argc, char **argv)
                 count_range++;
                 ROS_INFO("%i", count_range);
             }
-            
+
             if (count_range >= SAMPLE_SIZE) {
                 count_range = 0;
                 DO_WriteLine(dio, 0, 0, 1);
                 usleep(10000);
             }
-            
+
             if (count_range < RANGE_MAX)
                 count_range ++;
         }
@@ -853,14 +851,14 @@ int main(int argc, char **argv)
                 if ((err = AI_ReadChannel(card, i + 18, range_sosp, (U16*) &chan_data_raw[i])) != NoError) {
                     printf(" AI_ReadChannel Ch#%d error : error_code: %d \n", i + 18, err);
                     std::stringstream ms;
-           			ms << "AI_ReadChannel Error Ch#" << i + 18 << " error : error_code: " << int(err);
+                    ms << "AI_ReadChannel Error Ch#" << i + 18 << " error : error_code: " << int(err);
                     message = ms.str();
-           		}
-                
+                }
+
                 chan_data[i] = chan_data_raw[i];
                 chan_voltage[i] = (((F32) chan_data[i]) / AG_MAX_VALUE) * max_voltage ;
                 chan_data[i] = int(chan_voltage[i] * 1000);
-                
+
                 double total = 0.0;
                 I16 cdata = chan_data_raw[i];
                 switch (i) {
@@ -875,7 +873,7 @@ int main(int argc, char **argv)
                         break;
                 }
             }
-            
+
             if (filter_imu) {
                 if (count_filtered_imu >= SAMPLE_FILTERED_EVERY) {
                     count_filtered_imu = 1;
@@ -888,7 +886,7 @@ int main(int argc, char **argv)
                 imu_2_raw_pub.publish(imu_2);
                 ROS_INFO("%s", "sending IMU_2");
             }
-            
+
             // imu2 message
             adc::imu_Adc msg;
             msg.message = message;
@@ -900,22 +898,22 @@ int main(int argc, char **argv)
             msg.az = chan_data[2];
             imu_2_adc_pub.publish(msg);
         }
-        
+
         if (enable_diag) {
             for (int i = 0; i < Chan_diag; i++) {
                 if ((err = AI_ReadChannel(card, i + 21, range_diag, (U16*) &chan_data_raw[i])) != NoError) {
-                    printf(" AI_ReadChannel Ch#%d error : error_code: %d \n", i + 21, err );
+                    printf(" AI_ReadChannel Ch#%d error : error_code: %d \n", i + 21, err);
                     std::stringstream ms;
-           			ms << "AI_ReadChannel Error Ch#" << i + 21 << " error : error_code: " << int(err);
+                    ms << "AI_ReadChannel Error Ch#" << i + 21 << " error : error_code: " << int(err);
                     message = ms.str();
-           		}
-                
+                }
+
                 double vRef = max_voltage_diag;
                 chan_voltage[i] = (chan_data_raw[i] * vRef / AG_MAX_VALUE);
                 ROS_INFO("raw %i: %i", i + 21, chan_data_raw[i]);
                 ROS_INFO("tensione gnd 5 3.3 %i (V): %f", i, chan_data_raw[i] * vRef / AG_MAX_VALUE);
             }
-            
+
             ROS_INFO("%s", "sending diag");
             // diag message
             adc::diag_Adc msg;
@@ -925,23 +923,23 @@ int main(int argc, char **argv)
             msg.v3v3 = chan_voltage[2];
             diag_adc_pub.publish(msg);
         }
-        
+
         count++;
         
         // FIXME: what is 2000?
         if (count > 2000) {
             Startup=false;
         }
-        
+
         ros::spinOnce();
         loop_rate.sleep();
     }
-    
+
     if (card >= 0)
         Release_Card(card);
     if (dio >= 0)
         Release_Card(dio);
     ROS_INFO("Shutdown");
-    
+
     return 0;
 }
