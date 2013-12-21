@@ -31,109 +31,133 @@
 #define Chan_imu_2 3
 #define Chan_diag 3
 
-// for IMU
-bool isMoving = false, Startup = true;
-double cal_offset[17]={140,140,140,140,140,140,140,140,140,140,140,140,140,140,140,140,140};
-//double orientation = 0;
-double rover_x,rover_y,rover_z;
+// for the accelerometer and gyroscope constants
+#define AG_MAX_VALUE 32768
+#define AG_REF_VOLTAGE 5
+#define AG_ZERO_RATE_VOLTAGE CALIBRATION * AG_REF_VOLTAGE / AG_MAX_VALUE
 
+// calibration constants
+#define CALIBRATION 140
+#define CALIB_ELEMENTS 17
+
+// value of g
+#define G_CONSTANT 9.7803084
+
+// TODO these values need calibration
+#define IMU1_G 0.300
+#define IMU2_G 0.800
+
+// converts from rad to degrees
+#define RAD_TO_DEG(x) x / (2 * M_PI / 360.0)
+
+// for IMU
+bool isMoving = false;
+bool startup = true;
+double calibrationOffset[17] = {140, 140, 140, 140, 140, 140, 140, 140, 140, 140, 140, 140, 140, 140, 140, 140, 140};
+double rover_x, rover_y, rover_z;
+
+/**
+ *
+ *  Update the IMU message given a buffer and raw data???
+ *
+ *  Parameters:
+ *      imuMsg: the IMU message to update
+ *      chan_data_raw: raw channel data to ???
+ *      i: index of what?!?!?!?!?!
+ *      calibration: some buffer of calibration but not the raw???
+ *
+ *  Returns:
+ *      nothing
+ */
 void updateImuState(sensor_msgs::Imu& imuMsg, I16 chan_data_raw, int i, boost::circular_buffer<float>& calibration)
 {
     double current_time = ros::Time::now().toSec();
     double last_time = imuMsg.header.stamp.toSec();
-    double linear_acceleration, angular_velocity, g;
-
-   if (((!isMoving)&&(i<3))||(Startup)) {
-       calibration.push_back(float(chan_data_raw));
-       double total = 0;
-       BOOST_FOREACH( float reading, calibration )
-       {
-           total += reading;
-       }
-       cal_offset[i] = total / calibration.size(); 
-       ROS_INFO("Calibration channel %d",i);
-   }
-
-//    double dt = current_time - last_time;
-
-    if ( i >= 3) //accelerometri
-    {
-     double scale_correction = 1.0;
-     double maxValue = 32768;
-     double vRef = 5;
-     double zeroRateV = cal_offset[i] /* 10888*/ * vRef / maxValue;
-     double sensitivity;
-       //IMU1
-	   if (i == 5){
-             g = 0.300; //TODO da calibrare
-		 	       zeroRateV -= g;
-       } //su asse z aggiungo la g
-       if (i <=5){
-             sensitivity = 0.300/9.7803084; //300mv/g  [V/ m/s^2]
-       }
-       //IMU2
-       if (i == 8){
-             g = 0.800; //TODO da calibrare
-		 	       zeroRateV -= g;
-       } //su asse z aggiungo la g
-       if ((i <=8)&&(i >5)){
-             sensitivity = 0.800/9.7803084; //300mv/g  [V/ m/s^2]
-       }
-     linear_acceleration = (chan_data_raw * vRef / maxValue - zeroRateV) / sensitivity;
+    double linear_acceleration;
+    double angular_velocity;
+    double g;
+    
+    if (((!isMoving) && (i < 3)) || (startup)) {
+        calibration.push_back(float(chan_data_raw));
+        double total = 0;
+        
+        BOOST_FOREACH (float reading, calibration) {
+            total += reading;
+        }
+        calibrationOffset[i] = total / calibration.size();
+        ROS_INFO("Calibration channel %d", i);
     }
     
-    if ( i < 3) //giroscopi
-    {
-       double scale_correction = 1.0;
-       double maxValue = 32768;
-       double vRef = 5;
-       double zeroRateV = cal_offset[i] /* 8340*/ * vRef / maxValue;
-       double sensitivity = 0.00333/(2*M_PI/360.0); //3.33mv/°/s  [V/rad/s]
-       angular_velocity = (chan_data_raw * vRef / maxValue - zeroRateV) / sensitivity;
+    // accelerometer
+    if (i >= 3) {
+        double zeroRateV = AG_ZERO_RATE_VOLTAGE;
+        double sensitivity;
+        
+        //IMU1
+        if (i == 5) {
+            zeroRateV -= IMU1_G;
+        }
+        
+        //su asse z aggiungo la g
+        if (i <= 5) {
+            sensitivity = IMU1_G / G_CONSTANT; //300mv/g  [V/ m/s^2]
+        }
+        
+        //IMU2
+        if (i == 8) {
+            zeroRateV -= IMU2_G;
+        }
+        
+        //su asse z aggiungo la g
+        if ((i > 5) && (i <= 8)) {
+            sensitivity = IMU2_G / G_CONSTANT; //800mv/g  [V/ m/s^2]
+        }
+        
+        linear_acceleration = (chan_data_raw * AG_REF_VOLTAGE / AG_MAX_VALUE - zeroRateV) / sensitivity;
     }
-
-//    drate = (chan_data_raw * vRef / maxValue - zeroRateV) / sensitivity;
-//
-//    orientation += drate * dt;
-    //ROS_INFO("orientation (deg): %f", (orientation));
-    //ROS_INFO("orientation (rad): %f", (orientation * (M_PI/180.0)));
-
+    
+    // gyroscope
+    if (i < 3) {
+        double sensitivity = RAD_TO_DEG(0.00333); //3.33mv/°/s  [V/rad/s]
+        angular_velocity = (chan_data_raw * AG_REF_VOLTAGE / AG_MAX_VALUE - AG_ZERO_RATE_VOLTAGE) / sensitivity;
+    }
+    
+    // add time to the message header
     imuMsg.header.stamp = ros::Time::now();
-//    imuMsg.orientation = tf::createQuaternionMsgFromYaw(orientation * (M_PI/180.0));
-    switch (i)
-     {
-    	case(0)://x
-    		    imuMsg.angular_velocity.y = angular_velocity;
-    	break;
-    	case(1)://y
-    		    imuMsg.angular_velocity.x = -angular_velocity;
-    	break;
-    	case(2)://z
-    		    imuMsg.angular_velocity.z = angular_velocity;
-    	break;
-        case(3)://ax
-    		    imuMsg.linear_acceleration.y = linear_acceleration;
-                rover_x = linear_acceleration;
-    	break;
-    	case(4)://ay
-    		    imuMsg.linear_acceleration.x = -linear_acceleration;
-                rover_y = linear_acceleration;
-    	break;
-    	case(5)://az
-    		    imuMsg.linear_acceleration.z = linear_acceleration;
-                rover_z = linear_acceleration;
-    	break;
-      case(6):
-    		    imuMsg.linear_acceleration.x = linear_acceleration;
-    	break;
-    	case(7):
-    		    imuMsg.linear_acceleration.y = linear_acceleration;
-                    //rover_y = linear_acceleration;
-    	break;
-    	case(8):
-    		    imuMsg.linear_acceleration.z = linear_acceleration;
-    	break;
-     }
+    switch (i) {
+            // Angulare velocity
+            // x
+    	case(0):
+            imuMsg.angular_velocity.y = angular_velocity;
+            break;
+            // y
+    	case(1):
+            imuMsg.angular_velocity.x = -angular_velocity;
+            break;
+            // z
+    	case(2):
+            imuMsg.angular_velocity.z = angular_velocity;
+            break;
+            // Linear acceleration
+            // x
+        case(3):
+            rover_x = linear_acceleration;
+        case(6)
+            imuMsg.linear_acceleration.y = linear_acceleration;
+            break;
+            // y
+    	case(4):
+            rover_y = linear_acceleration;
+        case(7):
+            imuMsg.linear_acceleration.x = -linear_acceleration;
+            break;
+            // z
+    	case(5):
+            rover_z = linear_acceleration;
+        case(8):
+            imuMsg.linear_acceleration.z = linear_acceleration;
+            break;
+    }
 }
 
 
@@ -602,7 +626,7 @@ int main(int argc, char **argv)
                            {
                                total += reading;
                            }
-                           cal_offset[i] = total / calib_sosp0.size() - 0.800/max_voltage*maxValue; 
+                           calibrationOffset[i] = total / calib_sosp0.size() - 0.800/max_voltage*maxValue; 
                            ROS_INFO("Calibration channel %d",i);
                         break;
                         case 11:
@@ -611,7 +635,7 @@ int main(int argc, char **argv)
                            {
                                total += reading;
                            }
-                           cal_offset[i] = total / calib_sosp1.size() ; 
+                           calibrationOffset[i] = total / calib_sosp1.size() ; 
                            ROS_INFO("Calibration channel %d",i);
                         break;
                         case 12:
@@ -620,7 +644,7 @@ int main(int argc, char **argv)
                            {
                                total += reading;
                            }
-                           cal_offset[i] = total / calib_sosp2.size() - 0.800/max_voltage*maxValue; 
+                           calibrationOffset[i] = total / calib_sosp2.size() - 0.800/max_voltage*maxValue; 
                            ROS_INFO("Calibration channel %d",i);
                         break;
                         case 13:
@@ -629,7 +653,7 @@ int main(int argc, char **argv)
                            {
                                total += reading;
                            }
-                           cal_offset[i] = total / calib_sosp3.size(); 
+                           calibrationOffset[i] = total / calib_sosp3.size(); 
                            ROS_INFO("Calibration channel %d",i);
                         break;
                         case 14:
@@ -638,7 +662,7 @@ int main(int argc, char **argv)
                            {
                                total += reading;
                            }
-                           cal_offset[i] = total / calib_sosp4.size() - 0.800/max_voltage*maxValue; 
+                           calibrationOffset[i] = total / calib_sosp4.size() - 0.800/max_voltage*maxValue; 
                            ROS_INFO("Calibration channel %d",i);
                         break;
                         case 15:
@@ -647,7 +671,7 @@ int main(int argc, char **argv)
                            {
                                total += reading;
                            }
-                           cal_offset[i] = total / calib_sosp5.size(); 
+                           calibrationOffset[i] = total / calib_sosp5.size(); 
                            ROS_INFO("Calibration channel %d",i);
                         break;
                         case 16:
@@ -656,7 +680,7 @@ int main(int argc, char **argv)
                            {
                                total += reading;
                            }
-                           cal_offset[i] = total / calib_sosp6.size() - 0.800/max_voltage*maxValue; 
+                           calibrationOffset[i] = total / calib_sosp6.size() - 0.800/max_voltage*maxValue; 
                            ROS_INFO("Calibration channel %d",i);
                         break;
                         case 17:
@@ -665,7 +689,7 @@ int main(int argc, char **argv)
                            {
                                total += reading;
                            }
-                           cal_offset[i] = total / calib_sosp7.size(); 
+                           calibrationOffset[i] = total / calib_sosp7.size(); 
                            ROS_INFO("Calibration channel %d",i);
                         break;
                    }
@@ -673,17 +697,17 @@ int main(int argc, char **argv)
                 }
                 else
                 {
-                    cal_offset[10]=21362;
-                    cal_offset[11]=23414;
-                    cal_offset[12]=20777;
-                    cal_offset[13]=21824;
-                    cal_offset[14]=21557;
-                    cal_offset[15]=22494;
-                    cal_offset[16]=20879;
-                    cal_offset[17]=22802;
+                    calibrationOffset[10]=21362;
+                    calibrationOffset[11]=23414;
+                    calibrationOffset[12]=20777;
+                    calibrationOffset[13]=21824;
+                    calibrationOffset[14]=21557;
+                    calibrationOffset[15]=22494;
+                    calibrationOffset[16]=20879;
+                    calibrationOffset[17]=22802;
                 }
               
-                double zeroRateV =  cal_offset[i] * vRef / maxValue;
+                double zeroRateV =  calibrationOffset[i] * vRef / maxValue;
                 double sensitivity = 0.800/9.7803084; //800mv/g  [V/ m/s^2]
                 chan_voltage[i-10] = (chan_data_raw[i-10] * vRef / maxValue - zeroRateV) / sensitivity;
        			ROS_INFO("raw %i: %i", i ,chan_data_raw[i-10]);
@@ -1077,7 +1101,7 @@ int main(int argc, char **argv)
     {
         Startup=false;
         //for(int i=10 ; i<10+Chan_sosp; i++ )
-        //   ROS_INFO("%d  -  %f",i,cal_offset[i]);
+        //   ROS_INFO("%d  -  %f",i,calibrationOffset[i]);
         //return(0);
     }
     
