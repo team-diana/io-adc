@@ -86,6 +86,19 @@ cdata = total / #m.size(); \
 updateImuState(imu, cdata, i, #calibration); \
 )
 
+// Update a variable and publish it's status, given an index and imu
+#define UPDATE_AXIS(m, calibration, i, imu) ( \
+if (filter_imu) { \
+#m.push_back(float(cdata)); \
+BOOST_FOREACH (float reading, #m) \
+{ \
+total += reading; \
+} \
+cdata = total / #m.size(); \
+} \
+updateImuState(#imu, cdata, #i, #calibration); \
+)
+
 // Updates the values of the pitch
 #define PITCH_UPDATE(pitch) ( \
 #pitch.push_back(float(pitch)); \
@@ -93,12 +106,23 @@ BOOST_FOREACH(float reading, #pitch) \
 { \
 total += reading; \
 } \
-sosp_data[i/2] = total / #pitch.size(); \
+sosp_data[i / 2] = total / #pitch.size(); \
+)
+
+// Updates the ranges
+#define UPDATE_RANGE(range) ( \
+#range.push_back(float(chan_voltage[i])); \
+BOOST_FOREACH(float reading, #range) \
+{ \
+total += reading; \
+} \
+cdata = total / #range.size(); \
 )
 
 // Sampling of the filtered data
 // defines the amount of samples to use before averaging the filtered result
 #define SAMPLE_FILTERED_EVERY 10
+#define SAMPLE_SIZE 400
 
 // for IMU
 bool isMoving = false;
@@ -119,6 +143,7 @@ double rover_x, rover_y, rover_z;
  *  Returns:
  *      nothing
  */
+
 void updateImuState(sensor_msgs::Imu& imuMsg, I16 chan_data_raw, int i, boost::circular_buffer<float>& calibration)
 {
     double current_time = ros::Time::now().toSec();
@@ -222,6 +247,7 @@ void updateImuState(sensor_msgs::Imu& imuMsg, I16 chan_data_raw, int i, boost::c
  *  Returns:
  *      bool: true for successful publishing and fails otherwise
  */
+
 bool movingStatus(adc::movingService::Request &req, adc::movingService::Response &res)
 {
     isMoving = req.status;
@@ -241,6 +267,7 @@ bool movingStatus(adc::movingService::Request &req, adc::movingService::Response
  *      int: exit status
  */
 
+// FIXME: look into the strange loops/indicies jumping aroung for possible optimizations
 int main(int argc, char **argv)
 {
     // Set up ROS
@@ -266,10 +293,10 @@ int main(int argc, char **argv)
     range2(6),
     range3(6),
     range4(6),
-    pitch1(400),
-    pitch2(400),
-    pitch3(400),
-    pitch4(400),
+    pitch1(SAMPLE_SIZE),
+    pitch2(SAMPLE_SIZE),
+    pitch3(SAMPLE_SIZE),
+    pitch4(SAMPLE_SIZE),
     x(50),
     y(50),
     z(50),
@@ -334,7 +361,7 @@ int main(int argc, char **argv)
     // be run simultaneously while using different parameters.
     ros::NodeHandle private_node_handle_("~");
     private_node_handle_.param("message", message, std::string("NO error"));
-    private_node_handle_.param("rate", rate, int(400));
+    private_node_handle_.param("rate", rate, int(SAMPLE_SIZE));
     private_node_handle_.param("topic_imu", topic_imu, std::string("ADC/IMU"));
     private_node_handle_.param("range_imu", range_imu, int(3));
     private_node_handle_.param("enable_imu", enable_imu, bool(true));
@@ -658,7 +685,7 @@ int main(int argc, char **argv)
             calibrationOffset[16] = 20879;
             calibrationOffset[17] = 22802;
             
-            for(int i = 0; i < Chan_sosp; i += 2) {
+            for (int i = 0; i < Chan_sosp; i += 2) {
                 double sosp_z = -chan_voltage[i];
                 double sosp_x = chan_voltage[i + 1];
                 // roll/pitch orientation from accelleration vector
@@ -691,9 +718,9 @@ int main(int argc, char **argv)
                 ROS_INFO("inclinazione %d (rad): %f", (i / 2 + 1), pitch);
             }
             
-            if (count % 10 == 0){
+            if (count % SAMPLE_FILTERED_EVERY == 0) {
                 ROS_INFO("%s", "sending suspension");
-                // sosp message
+                // Create suspension message and publish it
                 adc::sosp_Adc msg;
                 msg.message = message;
                 msg.x1 = chan_data_raw[0];
@@ -704,46 +731,37 @@ int main(int argc, char **argv)
                 msg.z3 = chan_data_raw[5];
                 msg.x4 = chan_data_raw[6];
                 msg.z4 = chan_data_raw[7];
-                msg.sosp1 = - sosp_data[0];
+                msg.sosp1 = -sosp_data[0];
                 msg.sosp2 = sosp_data[1];
                 msg.sosp3 = sosp_data[2];
-                msg.sosp4 = - sosp_data[3];
+                msg.sosp4 = -sosp_data[3];
                 sosp_adc_pub.publish(msg);
             }
         }
         
-        
-        
-        
-        if (enable_range)
-        {
-            if (count_range==RANGE_MAX)
-            {
-                DO_WriteLine(dio, 0,0, 0);
+        if (enable_range) {
+            // FIXME: what is this supposed to do?
+            if (count_range == RANGE_MAX) {
+                DO_WriteLine(dio, 0, 0, 0);
                 usleep(50000);
             }
-            if (count_range>=RANGE_MAX)
-            {
-                if (count%10 == 0)
-                {
-                    for(int i=6 ; i<Chan_range+6; i++ )
-                    {
-                        if( (err = AI_ReadChannel(card, i, range_range, (U16*)&chan_data_raw[i-6]) ) != NoError )
-                        {
-                            printf(" AI_ReadChannel Ch#%d error : error_code: %d \n", i, err );
+            
+            if (count_range >= RANGE_MAX) {
+                if (count % SAMPLE_FILTERED_EVERY == 0) {
+                    for (int i = 0; i < Chan_range; i++) {
+                        if ((err = AI_ReadChannel(card, i + 6, range_range, (U16*) &chan_data_raw[i])) != NoError) {
+                            printf("AI_ReadChannel Ch#%d error : error_code: %d \n", i + 6, err);
                             std::stringstream ms;
-                            ms << "AI_ReadChannel Error Ch#" << i << " error : error_code: " << int(err);
-                            message =ms.str();
+                            ms << "AI_ReadChannel Error Ch#" << i + 6 << " error : error_code: " << int(err);
+                            message = ms.str();
                         }
-                        chan_data[i-6] = chan_data_raw[i-6];
-                        chan_voltage[i-6] = (((F32) chan_data[i-6]) / AG_MAX_VALUE)* max_voltage_range ;
-                        //chan_data[i-6] = int (chan_voltage[i-6] * 1000);
                         
-                        //ROS_INFO("lettura %d (V): %f", i, (chan_voltage[i-6]));
+                        chan_data[i] = chan_data_raw[i];
+                        chan_voltage[i] = (((F32) chan_data[i]) / AG_MAX_VALUE) * max_voltage_range;
                         
-                        F32 cdata;//=chan_voltage[i-6];
+                        F32 cdata;
                         ROS_INFO("%s", "reading Range");
-                        // adc message
+                        // ADC message
                         range.header.stamp = ros::Time::now();
                         range.radiation_type = 1;
                         range.field_of_view = 0.1;
@@ -751,56 +769,10 @@ int main(int argc, char **argv)
                         F32 range_temp;
                         double total = 0;
                         
-                        
-                        switch (i-6)
-                        {
-                            case 2:
-                                range3.push_back(float(chan_voltage[i-6]));
-                                BOOST_FOREACH( float reading, range3 )
-                            {
-                                total += reading;
-                            }
-                                cdata = total / range3.size();
-                                
-                                range.header.frame_id = "Range_Front";
-                                range.min_range = 0.15;
-                                range.max_range = 1.50;
-                                range_temp = (-32.8990*pow(cdata,3)+188.6361*pow(cdata,2)-363.4607*cdata+269.1088)/100;
-                                if (range_temp > range.max_range)
-                                    range.range = range.max_range;
-                                else if (range_temp < range.min_range)
-                                    range.range = range.min_range;
-                                else
-                                    range.range = range_temp;
-                                rangef_pub.publish(range);
-                                break;
-                            case 3:
-                                range4.push_back(float(chan_voltage[i-6]));
-                                BOOST_FOREACH( float reading, range4 )
-                            {
-                                total += reading;
-                            }
-                                cdata = total / range4.size();
-                                
-                                range.header.frame_id = "Range_Front_Down";
-                                range.min_range = 0.03;
-                                range.max_range = 0.40;
-                                range_temp = (-5.88513*pow(cdata,3)+36.3739*pow(cdata,2)-74.5612*cdata+56.8315)/100;
-                                if (range_temp > range.max_range)
-                                    range.range = range.max_range;
-                                else if (range_temp < range.min_range)
-                                    range.range = range.min_range;
-                                else
-                                    range.range = range_temp;
-                                rangefd_pub.publish(range);
-                                break;
+                        // FIXME: please explain the constants; all of them
+                        switch (i) {
                             case 0:
-                                range1.push_back(float(chan_voltage[i-6]));
-                                BOOST_FOREACH( float reading, range1 )
-                            {
-                                total += reading;
-                            }
-                                cdata = total / range1.size();
+                                UPDATE_RANGE(range1);
                                 
                                 range.header.frame_id = "Range_Post";
                                 range.min_range = 0.15;
@@ -815,12 +787,7 @@ int main(int argc, char **argv)
                                 rangep_pub.publish(range);
                                 break;
                             case 1:
-                                range2.push_back(float(chan_voltage[i-6]));
-                                BOOST_FOREACH( float reading, range2 )
-                            {
-                                total += reading;
-                            }
-                                cdata = total / range2.size();
+                                UPDATE_RANGE(range2);
                                 
                                 range.header.frame_id = "Range_Post_Down";
                                 range.min_range = 0.03;
@@ -834,139 +801,94 @@ int main(int argc, char **argv)
                                     range.range = range_temp;
                                 rangepd_pub.publish(range);
                                 break;
+                            case 2:
+                                UPDATE_RANGE(range3);
+                                
+                                range.header.frame_id = "Range_Front";
+                                range.min_range = 0.15;
+                                range.max_range = 1.50;
+                                range_temp = (-32.8990*pow(cdata,3)+188.6361*pow(cdata,2)-363.4607*cdata+269.1088)/100;
+                                if (range_temp > range.max_range)
+                                    range.range = range.max_range;
+                                else if (range_temp < range.min_range)
+                                    range.range = range.min_range;
+                                else
+                                    range.range = range_temp;
+                                rangef_pub.publish(range);
+                                break;
+                            case 3:
+                                UPDATE_RANGE(range4);
+                                
+                                range.header.frame_id = "Range_Front_Down";
+                                range.min_range = 0.03;
+                                range.max_range = 0.40;
+                                range_temp = (-5.88513*pow(cdata,3)+36.3739*pow(cdata,2)-74.5612*cdata+56.8315)/100;
+                                if (range_temp > range.max_range)
+                                    range.range = range.max_range;
+                                else if (range_temp < range.min_range)
+                                    range.range = range.min_range;
+                                else
+                                    range.range = range_temp;
+                                rangefd_pub.publish(range);
+                                break;
                         }
                     }
                 }
-                count_range ++;
-                ROS_INFO("%i",count_range);
+                count_range++;
+                ROS_INFO("%i", count_range);
             }
-            if (count_range>=400)
-            {
+            
+            if (count_range >= SAMPLE_SIZE) {
                 count_range = 0;
-                DO_WriteLine(dio, 0,0,1);
+                DO_WriteLine(dio, 0, 0, 1);
                 usleep(10000);
             }
-            if (count_range<RANGE_MAX)
-            {
+            
+            if (count_range < RANGE_MAX)
                 count_range ++;
-            }
         }
         
-        
-        
-        
-        
-        if ((enable_imu_2) && (count_range<RANGE_MAX))
-        {
-            for(int i=18 ; i<18+Chan_imu_2; i++ )
-            {
-                if( (err = AI_ReadChannel(card, i, range_sosp, (U16*)&chan_data_raw[i-18]) ) != NoError )
-           		{
-                    printf(" AI_ReadChannel Ch#%d error : error_code: %d \n", i, err );
+        if ((enable_imu_2) && (count_range < RANGE_MAX)) {
+            for (int i = 0; i < Chan_imu_2; i++) {
+                if ((err = AI_ReadChannel(card, i + 18, range_sosp, (U16*) &chan_data_raw[i])) != NoError) {
+                    printf(" AI_ReadChannel Ch#%d error : error_code: %d \n", i + 18, err);
                     std::stringstream ms;
-           			ms << "AI_ReadChannel Error Ch#" << i << " error : error_code: " << int(err);
-                    message =ms.str();
+           			ms << "AI_ReadChannel Error Ch#" << i + 18 << " error : error_code: " << int(err);
+                    message = ms.str();
            		}
-                chan_data[i-18] = chan_data_raw[i-18];
-                chan_voltage[i-18] = (((F32) chan_data[i-18]) / AG_MAX_VALUE)* max_voltage ;
-                chan_data[i-18] = int (chan_voltage[i-18] * 1000);
+                
+                chan_data[i] = chan_data_raw[i];
+                chan_voltage[i] = (((F32) chan_data[i]) / AG_MAX_VALUE) * max_voltage ;
+                chan_data[i] = int(chan_voltage[i] * 1000);
                 
                 double total = 0.0;
-                I16 cdata=chan_data_raw[i-18];
-                switch (i-18)
-                {
+                I16 cdata = chan_data_raw[i];
+                switch (i) {
                     case 0:
-                        if (filter_imu)
-                        {
-                            //                 BOOST_FOREACH( float reading, ax )
-                            //                 {
-                            //                     total += reading;
-                            //                 }
-                            //                 float median = total / ax.size();
-                            //                 if ((abs(cdata - median)/median < 0.04) || (count == 0))
-                            //                     ax.push_back(float(cdata));
-                            //                 else
-                            //                     {
-                            //                     ROS_INFO("--------------------------------------------------------------------ax");
-                            //                     cdata = median;
-                            ax2.push_back(float(cdata));
-                            //                     }
-                            BOOST_FOREACH( float reading, ax2 )
-                            {
-                                total += reading;
-                            }
-                            cdata = total / ax2.size();
-                        }
-                        updateImuState(imu_2, cdata, i-16+6, calibration6);
+                        UPDATE_AXIS(ax2, calibration6, i + 8, imu_2);
                         break;
                     case 1:
-                        if (filter_imu)
-                        {
-                            //                 BOOST_FOREACH( float reading, ay )
-                            //                 {
-                            //                     total += reading;
-                            //                 }
-                            //                 float median = total / ay.size();
-                            //                 if ((abs(cdata - median)/median < 0.04) || (count == 0))
-                            //                     ay.push_back(float(cdata));
-                            //                 else
-                            //                     {
-                            //                     ROS_INFO("--------------------------------------------------------------------ay");
-                            //                     cdata = median;
-                            ay2.push_back(float(cdata));
-                            //                     }
-                            BOOST_FOREACH( float reading, ay2 )
-                            {
-                                total += reading;
-                            }
-                            cdata = total / ay2.size();
-                        }
-                        updateImuState(imu_2, cdata, i-16+6, calibration7);
+                        UPDATE_AXIS(ay2, calibration7, i + 8, imu_2);
                         break;
                     case 2:
-                        if (filter_imu)
-                        {
-                            //                 BOOST_FOREACH( float reading, az )
-                            //                 {
-                            //                     total += reading;
-                            //                 }
-                            //                 float median = total / az.size();
-                            //                 if ((abs(cdata - median)/median < 0.04) || (count == 0))
-                            //                     az.push_back(float(cdata));
-                            //                 else
-                            //                     {
-                            //                     ROS_INFO("--------------------------------------------------------------------az");
-                            //                     cdata = median;
-                            az2.push_back(float(cdata));
-                            //                     }
-                            BOOST_FOREACH( float reading, az2 )
-                            {
-                                total += reading;
-                            }
-                            cdata = total / az2.size();
-                        }
-                        updateImuState(imu_2, cdata, i-16+6, calibration8);
+                        UPDATE_AXIS(az2, calibration8, i + 8, imu_2);
                         break;
                 }
             }
-            if (filter_imu)
-            {
-                if (count_filtered_imu>=10)
-                {
+            
+            if (filter_imu) {
+                if (count_filtered_imu >= SAMPLE_FILTERED_EVERY) {
                     count_filtered_imu = 1;
                     imu_2_raw_pub.publish(imu_2);
                     ROS_INFO("%s", "sending IMU_2 filtered");
+                } else {
+                    count_filtered_imu++;
                 }
-                else
-                {
-                    count_filtered_imu ++;
-                }
-            }
-            else
-            {
+            } else {
                 imu_2_raw_pub.publish(imu_2);
                 ROS_INFO("%s", "sending IMU_2");
             }
+            
             // imu2 message
             adc::imu_Adc msg;
             msg.message = message;
@@ -979,28 +901,19 @@ int main(int argc, char **argv)
             imu_2_adc_pub.publish(msg);
         }
         
-        
-        
-        
-        
-        if ((enable_diag))
-        {
-            for(int i=21 ; i<21+Chan_diag; i ++ )
-            {
-                if( (err = AI_ReadChannel(card, i, range_diag, (U16*)&chan_data_raw[i-21]) ) != NoError )
-           		{
-                    printf(" AI_ReadChannel Ch#%d error : error_code: %d \n", i, err );
+        if (enable_diag) {
+            for (int i = 0; i < Chan_diag; i++) {
+                if ((err = AI_ReadChannel(card, i + 21, range_diag, (U16*) &chan_data_raw[i])) != NoError) {
+                    printf(" AI_ReadChannel Ch#%d error : error_code: %d \n", i + 21, err );
                     std::stringstream ms;
-           			ms << "AI_ReadChannel Error Ch#" << i << " error : error_code: " << int(err);
-                    message =ms.str();
+           			ms << "AI_ReadChannel Error Ch#" << i + 21 << " error : error_code: " << int(err);
+                    message = ms.str();
            		}
                 
-                double scale_correction = 1.0;
-                double maxValue = AG_MAX_VALUE;
                 double vRef = max_voltage_diag;
-                chan_voltage[i-21] = (chan_data_raw[i-21] * vRef / maxValue);
-                ROS_INFO("raw %i: %i", i ,chan_data_raw[i-21]);
-                ROS_INFO("tensione gnd 5 3.3 %i (V): %f", i-21 ,chan_data_raw[i-21] * vRef / maxValue);
+                chan_voltage[i] = (chan_data_raw[i] * vRef / AG_MAX_VALUE);
+                ROS_INFO("raw %i: %i", i + 21, chan_data_raw[i]);
+                ROS_INFO("tensione gnd 5 3.3 %i (V): %f", i, chan_data_raw[i] * vRef / AG_MAX_VALUE);
             }
             
             ROS_INFO("%s", "sending diag");
@@ -1013,27 +926,22 @@ int main(int argc, char **argv)
             diag_adc_pub.publish(msg);
         }
         
+        count++;
         
-        ++count;
-        
-        if (count>2000)
-        {
+        // FIXME: what is 2000?
+        if (count > 2000) {
             Startup=false;
-            //for(int i=10 ; i<10+Chan_sosp; i++ )
-            //   ROS_INFO("%d  -  %f",i,calibrationOffset[i]);
-            //return(0);
         }
         
         ros::spinOnce();
         loop_rate.sleep();
     }
     
-    if(card>=0)
-        Release_Card( card );
-    if(dio>=0)
-        Release_Card( dio );
+    if (card >= 0)
+        Release_Card(card);
+    if (dio >= 0)
+        Release_Card(dio);
     ROS_INFO("Shutdown");
     
     return 0;
 }
-// end main()
