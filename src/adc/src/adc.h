@@ -35,12 +35,6 @@
 // Converts from rad to degrees
 #define RAD_TO_DEG(x) (x / (2 * M_PI / 360.0))
 
-// Reange constants
-#define RANGE_TWO 5
-#define RANGE_THREE 2.5
-#define RANGE_FOUR 1.25
-#define RANGE_MAX 370
-
 // Set the max range given a boolean expression, the switch case condition, and the variable to modify
 #define SET_MAX_RANGE(bool_exp, switch_case, var) ( \
 if (#bool_exp) { \
@@ -104,10 +98,28 @@ total += reading; \
 cdata = total / #range.size(); \
 )
 
+// limit the output of the range finder
+#define LIMIT_RANGE() ( \
+if (range_temp > range.max_range) \
+range.range = range.max_range; \
+else if (range_temp < range.min_range) \
+range.range = range.min_range; \
+else \
+range.range = range_temp; \
+)
+
 // Sampling of the filtered data
 // defines the amount of samples to use before averaging the filtered result
 #define SAMPLE_FILTERED_EVERY 10
-#define SAMPLE_SIZE 400
+#define SAMPLE_FILTERED_EVERY_RANGE 2
+#define SAMPLE_SIZE_50 50
+#define SAMPLE_SIZE_10 10
+#define SAMPLE_SIZE_5 5
+#define RATE 100
+// Range constants
+#define CICLE_RANGE 90
+//initialization
+#define INITIALIZATION_TIMER 1000
 
 // for IMU
 bool isMoving = false;
