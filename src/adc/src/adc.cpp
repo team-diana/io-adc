@@ -89,7 +89,7 @@ void updateImuState(sensor_msgs::Imu& imuMsg, I16 chan_data_raw, int i, boost::c
 
     // gyroscope
     if (i < 3) {
-        double sensitivity = RAD_TO_DEG(0.00333); //3.33mv/°/s  [V/rad/s]
+        double sensitivity = RAD_TO_DEG(0.00333); //3.33mv/ï¿½/s  [V/rad/s]
         angular_velocity = (chan_data_raw * AG_REF_VOLTAGE / AG_MAX_VALUE - AG_ZERO_RATE_VOLTAGE) / sensitivity;
     }
 
@@ -175,8 +175,8 @@ int main(int argc, char **argv)
     sensor_msgs::Imu imu,imu_2;
     sensor_msgs::Range range;
 
-    // What is this?!
-    boost::circular_buffer<float> calibration0(140),
+    // What is this?! this is the declaration of all the circular buffer for calibration and mean
+    boost::circular_buffer<float> calibration0(CALIBRATION),
     calibration1(CALIBRATION),
     calibration2(CALIBRATION),
     calibration3(CALIBRATION),
@@ -185,23 +185,23 @@ int main(int argc, char **argv)
     calibration6(CALIBRATION),
     calibration7(CALIBRATION),
     calibration8(CALIBRATION),
-    range1(6),
-    range2(6),
-    range3(6),
-    range4(6),
-    pitch1(SAMPLE_SIZE),
-    pitch2(SAMPLE_SIZE),
-    pitch3(SAMPLE_SIZE),
-    pitch4(SAMPLE_SIZE),
-    x(50),
-    y(50),
-    z(50),
-    ax(50),
-    ay(50),
-    az(50),
-    ax2(50),
-    ay2(50),
-    az2(50),
+    range1(SAMPLE_SIZE_5),
+    range2(SAMPLE_SIZE_5),
+    range3(SAMPLE_SIZE_5),
+    range4(SAMPLE_SIZE_5),
+    pitch1(SAMPLE_SIZE_50),
+    pitch2(SAMPLE_SIZE_50),
+    pitch3(SAMPLE_SIZE_50),
+    pitch4(SAMPLE_SIZE_50),
+    x(SAMPLE_SIZE_50),
+    y(SAMPLE_SIZE_50),
+    z(SAMPLE_SIZE_50),
+    ax(SAMPLE_SIZE_10),
+    ay(SAMPLE_SIZE_10),
+    az(SAMPLE_SIZE_10),
+    ax2(SAMPLE_SIZE_10),
+    ay2(SAMPLE_SIZE_10),
+    az2(SAMPLE_SIZE_10),
     calib_sosp0(CALIBRATION),
     calib_sosp1(CALIBRATION),
     calib_sosp2(CALIBRATION),
@@ -258,7 +258,7 @@ int main(int argc, char **argv)
     // be run simultaneously while using different parameters.
     ros::NodeHandle private_node_handle_("~");
     private_node_handle_.param("message", message, std::string("NO error"));
-    private_node_handle_.param("rate", rate, int(SAMPLE_SIZE));
+    private_node_handle_.param("rate", rate, int(RATE));
     private_node_handle_.param("topic_imu", topic_imu, std::string("ADC/IMU"));
     private_node_handle_.param("range_imu", range_imu, int(3));
     private_node_handle_.param("enable_imu", enable_imu, bool(true));
@@ -401,7 +401,7 @@ int main(int argc, char **argv)
                 count = 0;
         }
         
-        if ((enable_imu) && (count_range < RANGE_MAX)) {
+        if ((enable_imu) && (count_range < CICLE_RANGE)) {
             for (int i = 0; i < Chan_IMU; i++) {
                 if ((err = AI_ReadChannel(card, i, range_imu, (U16*) &chan_data_raw[i])) != NoError) {
                     printf("AI_ReadChannel Ch#%d error : error_code: %d \n", i, err);
@@ -463,7 +463,7 @@ int main(int argc, char **argv)
             imu_adc_pub.publish(msg);
         }
 
-        if ((enable_sosp) && (count_range < RANGE_MAX)) {
+        if ((enable_sosp) && (count_range < CICLE_RANGE)) {
             for (int i = 0; i < Chan_sosp; i++) {
                 if ((err = AI_ReadChannel(card, i + 10, range_sosp, (U16*) &chan_data_raw[i])) != NoError) {
                     printf(" AI_ReadChannel Ch#%d error : error_code: %d \n", i + 10, err );
@@ -475,7 +475,7 @@ int main(int argc, char **argv)
                 double total = 0;
                 double vRef = max_voltage;
 
-/* FIXME: this is never entered!
+/* FIXME: this is never entered!   it's normal, I use this piece of code in some test
                  if ((Startup)&&false) {
                  switch(i)
                  {
@@ -559,8 +559,18 @@ int main(int argc, char **argv)
                  
                  }
                  */
+                 
+                // These are 10 selected values from the raw output when the rover is in calibration mode
+                calibrationOffset[10] = 21362;
+                calibrationOffset[11] = 23414;
+                calibrationOffset[12] = 20777;
+                calibrationOffset[13] = 21824;
+                calibrationOffset[14] = 21557;
+                calibrationOffset[15] = 22494;
+                calibrationOffset[16] = 20879;
+                calibrationOffset[17] = 22802;
 
-                double zeroRateV =  calibrationOffset[i] * vRef / AG_MAX_VALUE;
+                double zeroRateV =  calibrationOffset[i+10] * vRef / AG_MAX_VALUE;
                 double sensitivity = IMU2_G / G_CONSTANT; //800mv/g  [V/ m/s^2]
                 chan_voltage[i] = (chan_data_raw[i] * vRef / AG_MAX_VALUE - zeroRateV) / sensitivity;
                 ROS_INFO("raw %i: %i", i + 10, chan_data_raw[i]);
@@ -568,16 +578,6 @@ int main(int argc, char **argv)
                 ROS_INFO("accelerazione (x,z) %i (m/s^2): %f", i + 10, chan_voltage[i]);
                 ROS_INFO("accelerazione y (m/s^2): %f", rover_y);
             }
-
-            // These are 10 selected values from the raw output when the rover is in caibration mode
-            calibrationOffset[10] = 21362;
-            calibrationOffset[11] = 23414;
-            calibrationOffset[12] = 20777;
-            calibrationOffset[13] = 21824;
-            calibrationOffset[14] = 21557;
-            calibrationOffset[15] = 22494;
-            calibrationOffset[16] = 20879;
-            calibrationOffset[17] = 22802;
 
             for (int i = 0; i < Chan_sosp; i += 2) {
                 double sosp_z = -chan_voltage[i];
@@ -634,14 +634,14 @@ int main(int argc, char **argv)
         }
 
         if (enable_range) {
-            // FIXME: what is this supposed to do?
-            if (count_range == RANGE_MAX) {
+            // FIXME: what is this supposed to do?    only every CICLE_RANGE of the main loop enable the range finder and read it five times
+            if (count_range == CICLE_RANGE) {
                 DO_WriteLine(dio, 0, 0, 0);
                 usleep(50000);
             }
 
-            if (count_range >= RANGE_MAX) {
-                if (count % SAMPLE_FILTERED_EVERY == 0) {
+            if (count_range >= CICLE_RANGE) {
+                if (count % SAMPLE_FILTERED_EVERY_RANGE == 0) {
                     for (int i = 0; i < Chan_range; i++) {
                         if ((err = AI_ReadChannel(card, i + 6, range_range, (U16*) &chan_data_raw[i])) != NoError) {
                             printf("AI_ReadChannel Ch#%d error : error_code: %d \n", i + 6, err);
@@ -655,7 +655,7 @@ int main(int argc, char **argv)
 
                         F32 cdata;
                         ROS_INFO("%s", "reading Range");
-                        // ADC message
+                        // range message
                         range.header.stamp = ros::Time::now();
                         range.radiation_type = 1;
                         range.field_of_view = 0.1;
@@ -672,12 +672,7 @@ int main(int argc, char **argv)
                                 range.min_range = 0.15;
                                 range.max_range = 1.50;
                                 range_temp = (-32.8990*pow(cdata,3)+188.6361*pow(cdata,2)-363.4607*cdata+269.1088)/100;
-                                if (range_temp > range.max_range)
-                                    range.range = range.max_range;
-                                else if (range_temp < range.min_range)
-                                    range.range = range.min_range;
-                                else
-                                    range.range = range_temp;
+                                LIMIT_RANGE();
                                 rangep_pub.publish(range);
                                 break;
                             case 1:
@@ -687,12 +682,7 @@ int main(int argc, char **argv)
                                 range.min_range = 0.03;
                                 range.max_range = 0.40;
                                 range_temp = (-5.88513*pow(cdata,3)+36.3739*pow(cdata,2)-74.5612*cdata+56.8315)/100;
-                                if (range_temp > range.max_range)
-                                    range.range = range.max_range;
-                                else if (range_temp < range.min_range)
-                                    range.range = range.min_range;
-                                else
-                                    range.range = range_temp;
+                                LIMIT_RANGE();
                                 rangepd_pub.publish(range);
                                 break;
                             case 2:
@@ -702,12 +692,7 @@ int main(int argc, char **argv)
                                 range.min_range = 0.15;
                                 range.max_range = 1.50;
                                 range_temp = (-32.8990*pow(cdata,3)+188.6361*pow(cdata,2)-363.4607*cdata+269.1088)/100;
-                                if (range_temp > range.max_range)
-                                    range.range = range.max_range;
-                                else if (range_temp < range.min_range)
-                                    range.range = range.min_range;
-                                else
-                                    range.range = range_temp;
+                                LIMIT_RANGE();
                                 rangef_pub.publish(range);
                                 break;
                             case 3:
@@ -717,12 +702,7 @@ int main(int argc, char **argv)
                                 range.min_range = 0.03;
                                 range.max_range = 0.40;
                                 range_temp = (-5.88513*pow(cdata,3)+36.3739*pow(cdata,2)-74.5612*cdata+56.8315)/100;
-                                if (range_temp > range.max_range)
-                                    range.range = range.max_range;
-                                else if (range_temp < range.min_range)
-                                    range.range = range.min_range;
-                                else
-                                    range.range = range_temp;
+                                LIMIT_RANGE();
                                 rangefd_pub.publish(range);
                                 break;
                         }
@@ -732,17 +712,17 @@ int main(int argc, char **argv)
                 ROS_INFO("%i", count_range);
             }
 
-            if (count_range >= SAMPLE_SIZE) {
+            if (count_range >= CICLE_RANGE + (SAMPLE_FILTERED_EVERY_RANGE * SAMPLE_SIZE_5) ) {
                 count_range = 0;
                 DO_WriteLine(dio, 0, 0, 1);
                 usleep(10000);
             }
 
-            if (count_range < RANGE_MAX)
+            if (count_range < CICLE_RANGE)
                 count_range ++;
         }
         
-        if ((enable_imu_2) && (count_range < RANGE_MAX)) {
+        if ((enable_imu_2) && (count_range < CICLE_RANGE)) {
             for (int i = 0; i < Chan_imu_2; i++) {
                 if ((err = AI_ReadChannel(card, i + 18, range_sosp, (U16*) &chan_data_raw[i])) != NoError) {
                     printf(" AI_ReadChannel Ch#%d error : error_code: %d \n", i + 18, err);
@@ -759,13 +739,13 @@ int main(int argc, char **argv)
                 I16 cdata = chan_data_raw[i];
                 switch (i) {
                     case 0:
-                        UPDATE_AXIS(ax2, calibration6, i + 8, imu_2);
+                        UPDATE_AXIS(ax2, calibration6, i + 6, imu_2);
                         break;
                     case 1:
-                        UPDATE_AXIS(ay2, calibration7, i + 8, imu_2);
+                        UPDATE_AXIS(ay2, calibration7, i + 6, imu_2);
                         break;
                     case 2:
-                        UPDATE_AXIS(az2, calibration8, i + 8, imu_2);
+                        UPDATE_AXIS(az2, calibration8, i + 6, imu_2);
                         break;
                 }
             }
@@ -822,9 +802,13 @@ int main(int argc, char **argv)
 
         count++;
         
-        // FIXME: what is 2000?
-        if (count > 2000) {
+        // FIXME: what is 1000?   it is a 16s timer for the initialization
+        if (count > INITIALIZATION_TIMER) {
             Startup=false;
+            //leave the following code commented
+            //for(int i=10 ; i<10+Chan_sosp; i++ )
+            //   ROS_INFO("%d  -  %f",i,cal_offset[i]);
+            //return(0);
         }
 
         ros::spinOnce();
