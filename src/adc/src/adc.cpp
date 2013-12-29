@@ -26,6 +26,9 @@
 #include "conio.h"
 #include "adc.h"
 
+// Set to 1 if the testing code is to be enabled
+#define TEST 0
+
 /**
  *
  *  Update the IMU message given a buffer and raw data???
@@ -175,7 +178,7 @@ int main(int argc, char **argv)
     sensor_msgs::Imu imu,imu_2;
     sensor_msgs::Range range;
 
-    // What is this?! this is the declaration of all the circular buffer for calibration and mean
+    // Circular buffers for calibration and mean computations
     boost::circular_buffer<float> calibration0(CALIBRATION),
     calibration1(CALIBRATION),
     calibration2(CALIBRATION),
@@ -401,7 +404,7 @@ int main(int argc, char **argv)
                 count = 0;
         }
         
-        if ((enable_imu) && (count_range < CICLE_RANGE)) {
+        if ((enable_imu) && (count_range < CYCLE_RANGE)) {
             for (int i = 0; i < Chan_IMU; i++) {
                 if ((err = AI_ReadChannel(card, i, range_imu, (U16*) &chan_data_raw[i])) != NoError) {
                     printf("AI_ReadChannel Ch#%d error : error_code: %d \n", i, err);
@@ -463,7 +466,7 @@ int main(int argc, char **argv)
             imu_adc_pub.publish(msg);
         }
 
-        if ((enable_sosp) && (count_range < CICLE_RANGE)) {
+        if ((enable_sosp) && (count_range < CYCLE_RANGE)) {
             for (int i = 0; i < Chan_sosp; i++) {
                 if ((err = AI_ReadChannel(card, i + 10, range_sosp, (U16*) &chan_data_raw[i])) != NoError) {
                     printf(" AI_ReadChannel Ch#%d error : error_code: %d \n", i + 10, err );
@@ -475,91 +478,86 @@ int main(int argc, char **argv)
                 double total = 0;
                 double vRef = max_voltage;
 
-/* FIXME: this is never entered!   it's normal, I use this piece of code in some test
-                 if ((Startup)&&false) {
-                 switch(i)
-                 {
-                 case 0:
-                 calib_sosp0.push_back(float(chan_data_raw[i-10]));
-                 BOOST_FOREACH( float reading, calib_sosp0 )
-                 {
-                 total += reading;
-                 }
-                 calibrationOffset[i] = total / calib_sosp0.size() - 0.800/max_voltage*maxValue;
-                 ROS_INFO("Calibration channel %d",i);
-                 break;
-                 case 1:
-                 calib_sosp1.push_back(float(chan_data_raw[i-10]));
-                 BOOST_FOREACH( float reading, calib_sosp1 )
-                 {
-                 total += reading;
-                 }
-                 calibrationOffset[i] = total / calib_sosp1.size() ;
-                 ROS_INFO("Calibration channel %d",i);
-                 break;
-                 case 2:
-                 calib_sosp2.push_back(float(chan_data_raw[i-10]));
-                 BOOST_FOREACH( float reading, calib_sosp2 )
-                 {
-                 total += reading;
-                 }
-                 calibrationOffset[i] = total / calib_sosp2.size() - 0.800/max_voltage*maxValue;
-                 ROS_INFO("Calibration channel %d",i);
-                 break;
-                 case 3:
-                 calib_sosp3.push_back(float(chan_data_raw[i-10]));
-                 BOOST_FOREACH( float reading, calib_sosp3 )
-                 {
-                 total += reading;
-                 }
-                 calibrationOffset[i] = total / calib_sosp3.size();
-                 ROS_INFO("Calibration channel %d",i);
-                 break;
-                 case 4:
-                 calib_sosp4.push_back(float(chan_data_raw[i-10]));
-                 BOOST_FOREACH( float reading, calib_sosp4 )
-                 {
-                 total += reading;
-                 }
-                 calibrationOffset[i] = total / calib_sosp4.size() - 0.800/max_voltage*maxValue;
-                 ROS_INFO("Calibration channel %d",i);
-                 break;
-                 case 5:
-                 calib_sosp5.push_back(float(chan_data_raw[i-10]));
-                 BOOST_FOREACH( float reading, calib_sosp5 )
-                 {
-                 total += reading;
-                 }
-                 calibrationOffset[i] = total / calib_sosp5.size();
-                 ROS_INFO("Calibration channel %d",i);
-                 break;
-                 case 6:
-                 calib_sosp6.push_back(float(chan_data_raw[i-10]));
-                 BOOST_FOREACH( float reading, calib_sosp6 )
-                 {
-                 total += reading;
-                 }
-                 calibrationOffset[i] = total / calib_sosp6.size() - 0.800/max_voltage*maxValue;
-                 ROS_INFO("Calibration channel %d",i);
-                 break;
-                 case 7:
-                 calib_sosp7.push_back(float(chan_data_raw[i-10]));
-                 BOOST_FOREACH( float reading, calib_sosp7 )
-                 {
-                 total += reading;
-                 }
-                 calibrationOffset[i] = total / calib_sosp7.size();
-                 ROS_INFO("Calibration channel %d",i);
-                 break;
-                 }
-                 
-                 }
-                 else
-                 {
-                 
-                 }
-                 */
-                 
+                // The following code will only run if TEST is set to 1 and during startup.
+                // It is mainly used to test
+                // TODO: this part might need a bit more cleaning up
+                if ((Startup) && DEBUG) {
+                    switch(i) {
+                        case 0:
+                            calib_sosp0.push_back(float(chan_data_raw[i-10]));
+                            BOOST_FOREACH( float reading, calib_sosp0 )
+                        {
+                            total += reading;
+                        }
+                            calibrationOffset[i] = total / calib_sosp0.size() - 0.800/max_voltage*maxValue;
+                            ROS_INFO("Calibration channel %d",i);
+                            break;
+                        case 1:
+                            calib_sosp1.push_back(float(chan_data_raw[i-10]));
+                            BOOST_FOREACH( float reading, calib_sosp1 )
+                        {
+                            total += reading;
+                        }
+                            calibrationOffset[i] = total / calib_sosp1.size() ;
+                            ROS_INFO("Calibration channel %d",i);
+                            break;
+                        case 2:
+                            calib_sosp2.push_back(float(chan_data_raw[i-10]));
+                            BOOST_FOREACH( float reading, calib_sosp2 )
+                        {
+                            total += reading;
+                        }
+                            calibrationOffset[i] = total / calib_sosp2.size() - 0.800/max_voltage*maxValue;
+                            ROS_INFO("Calibration channel %d",i);
+                            break;
+                        case 3:
+                            calib_sosp3.push_back(float(chan_data_raw[i-10]));
+                            BOOST_FOREACH( float reading, calib_sosp3 )
+                        {
+                            total += reading;
+                        }
+                            calibrationOffset[i] = total / calib_sosp3.size();
+                            ROS_INFO("Calibration channel %d",i);
+                            break;
+                        case 4:
+                            calib_sosp4.push_back(float(chan_data_raw[i-10]));
+                            BOOST_FOREACH( float reading, calib_sosp4 )
+                        {
+                            total += reading;
+                        }
+                            calibrationOffset[i] = total / calib_sosp4.size() - 0.800/max_voltage*maxValue;
+                            ROS_INFO("Calibration channel %d",i);
+                            break;
+                        case 5:
+                            calib_sosp5.push_back(float(chan_data_raw[i-10]));
+                            BOOST_FOREACH( float reading, calib_sosp5 )
+                        {
+                            total += reading;
+                        }
+                            calibrationOffset[i] = total / calib_sosp5.size();
+                            ROS_INFO("Calibration channel %d",i);
+                            break;
+                        case 6:
+                            calib_sosp6.push_back(float(chan_data_raw[i-10]));
+                            BOOST_FOREACH( float reading, calib_sosp6 )
+                        {
+                            total += reading;
+                        }
+                            calibrationOffset[i] = total / calib_sosp6.size() - 0.800/max_voltage*maxValue;
+                            ROS_INFO("Calibration channel %d",i);
+                            break;
+                        case 7:
+                            calib_sosp7.push_back(float(chan_data_raw[i-10]));
+                            BOOST_FOREACH( float reading, calib_sosp7 )
+                        {
+                            total += reading;
+                        }
+                            calibrationOffset[i] = total / calib_sosp7.size();
+                            ROS_INFO("Calibration channel %d",i);
+                            break;
+                    }
+                }
+
                 // These are 10 selected values from the raw output when the rover is in calibration mode
                 calibrationOffset[10] = 21362;
                 calibrationOffset[11] = 23414;
@@ -634,13 +632,14 @@ int main(int argc, char **argv)
         }
 
         if (enable_range) {
-            // FIXME: what is this supposed to do?    only every CICLE_RANGE of the main loop enable the range finder and read it five times
-            if (count_range == CICLE_RANGE) {
+            // Read the DIO 5 times if the CYCLE_RANGE has been reached
+            // FIXME: why do we do this? and isn't usleep like a pause/wait? So I cann't exactly see the reading part...
+            if (count_range == CYCLE_RANGE) {
                 DO_WriteLine(dio, 0, 0, 0);
                 usleep(50000);
             }
 
-            if (count_range >= CICLE_RANGE) {
+            if (count_range >= CYCLE_RANGE) {
                 if (count % SAMPLE_FILTERED_EVERY_RANGE == 0) {
                     for (int i = 0; i < Chan_range; i++) {
                         if ((err = AI_ReadChannel(card, i + 6, range_range, (U16*) &chan_data_raw[i])) != NoError) {
@@ -712,17 +711,17 @@ int main(int argc, char **argv)
                 ROS_INFO("%i", count_range);
             }
 
-            if (count_range >= CICLE_RANGE + (SAMPLE_FILTERED_EVERY_RANGE * SAMPLE_SIZE_5) ) {
+            if (count_range >= CYCLE_RANGE + (SAMPLE_FILTERED_EVERY_RANGE * SAMPLE_SIZE_5) ) {
                 count_range = 0;
                 DO_WriteLine(dio, 0, 0, 1);
                 usleep(10000);
             }
 
-            if (count_range < CICLE_RANGE)
-                count_range ++;
+            if (count_range < CYCLE_RANGE)
+                count_range++;
         }
         
-        if ((enable_imu_2) && (count_range < CICLE_RANGE)) {
+        if ((enable_imu_2) && (count_range < CYCLE_RANGE)) {
             for (int i = 0; i < Chan_imu_2; i++) {
                 if ((err = AI_ReadChannel(card, i + 18, range_sosp, (U16*) &chan_data_raw[i])) != NoError) {
                     printf(" AI_ReadChannel Ch#%d error : error_code: %d \n", i + 18, err);
@@ -804,10 +803,10 @@ int main(int argc, char **argv)
         
         // FIXME: what is 1000?   it is a 16s timer for the initialization
         if (count > INITIALIZATION_TIMER) {
-            Startup=false;
+            Startup = false;
             //leave the following code commented
-            //for(int i=10 ; i<10+Chan_sosp; i++ )
-            //   ROS_INFO("%d  -  %f",i,cal_offset[i]);
+            //for (int i = 10 ; i < 10+Chan_sosp; i++)
+            //   ROS_INFO("%d  -  %f", i, cal_offset[i]);
             //return(0);
         }
 

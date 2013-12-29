@@ -116,9 +116,11 @@ range.range = range_temp; \
 #define SAMPLE_SIZE_10 10
 #define SAMPLE_SIZE_5 5
 #define RATE 100
+
 // Range constants
-#define CICLE_RANGE 90
-//initialization
+#define CYCLE_RANGE 90
+
+// Initialization timer length
 #define INITIALIZATION_TIMER 1000
 
 // for IMU
