@@ -421,22 +421,22 @@ int main(int argc, char **argv)
                 I16 cdata = chan_data_raw[i];
                 switch (i) {
                     case 0:
-                        UPDATE_AXIS(x, calibration0);
+                        UPDATE_AXIS(x, calibration0, i, imu);
                         break;
                     case 1:
-                        UPDATE_AXIS(y, calibration1);
+                        UPDATE_AXIS(y, calibration1, i, imu);
                         break;
                     case 2:
-                        UPDATE_AXIS(z, calibration2);
+                        UPDATE_AXIS(z, calibration2, i, imu);
                         break;
                     case 3:
-                        UPDATE_AXIS(ax, calibration3);
+                        UPDATE_AXIS(ax, calibration3, i, imu);
                         break;
                     case 4:
-                        UPDATE_AXIS(ay, calibration4);
+                        UPDATE_AXIS(ay, calibration4, i, imu);
                         break;
                     case 5:
-                        UPDATE_AXIS(az, calibration5);
+                        UPDATE_AXIS(az, calibration5, i, imu);
                         break;
                 }
             }

@@ -52,19 +52,6 @@ break; \
 } \
 )
 
-// Update a variable and publish it's status
-#define UPDATE_AXIS(m, calibration) ( \
-if (filter_imu) { \
-#m.push_back(float(cdata)); \
-BOOST_FOREACH (float reading, #m) \
-{ \
-total += reading; \
-} \
-cdata = total / #m.size(); \
-} \
-updateImuState(imu, cdata, i, #calibration); \
-)
-
 // Update a variable and publish it's status, given an index and imu
 #define UPDATE_AXIS(m, calibration, i, imu) ( \
 if (filter_imu) { \
