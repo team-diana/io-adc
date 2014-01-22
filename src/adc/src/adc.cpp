@@ -27,7 +27,7 @@
 #include "adc.h"
 
 // Set to 1 if the testing code is to be enabled
-#define TEST 0
+#define DEBUG 1
 
 /**
  *
@@ -113,16 +113,20 @@ void updateImuState(sensor_msgs::Imu& imuMsg, I16 chan_data_raw, int i, boost::c
             imuMsg.angular_velocity.z = angular_velocity;
             break;
             // Linear acceleration
-            // FIXME: original code had the variables x and y flipped for linear_acceleration, why?
+            // FIXME: original code had the variables x and y flipped for linear_acceleration, why? MUST be , the imu is rotated
             // x
         case(3):
             rover_x = linear_acceleration;
+            imuMsg.linear_acceleration.y = linear_acceleration;
+            break;
         case(6):
             imuMsg.linear_acceleration.x = linear_acceleration;
             break;
             // y
         case(4):
             rover_y = linear_acceleration;
+            imuMsg.linear_acceleration.x = -linear_acceleration;
+            break;
         case(7):
             imuMsg.linear_acceleration.y = -linear_acceleration;
             break;
@@ -290,7 +294,7 @@ int main(int argc, char **argv)
         exit(1);
     }
     
-    if ((*err = AI_9116_Config(card, P9116_AI_SingEnded | P9116_AI_UserCMMD, P9116_AI_SoftPolling, 0, 0, 0)) != NoError) {
+      if (err = AI_9116_Config(card, P9116_AI_SingEnded|P9116_AI_UserCMMD, P9116_AI_SoftPolling ,0, 0, 0) != NoError) {
         printf("Config error : error_code: %d \n", err);
         std::stringstream ms;
         ms << "Config error Error: error_code: " << int(err);
@@ -307,8 +311,8 @@ int main(int argc, char **argv)
     SET_MAX_RANGE(enable_range, range_range, max_voltage_range);
     SET_MAX_RANGE(enable_diag, range_diag, max_voltage_diag);
 
-/*
-     
+
+     /*
      // This should be implemented in the macro SET_MAX_RANGE
      
      if (enable_imu || enable_sosp || enable_imu_2) {
@@ -355,9 +359,8 @@ int main(int argc, char **argv)
      max_voltage_diag = RANGE_FOUR;
      break;
      }
-     }
+     }*/
      
-     */
 
     // FIXME: add documentation to the following overall code functionality
     // TODO: config; fill in IMU data (start at 0 orientation)
@@ -420,22 +423,22 @@ int main(int argc, char **argv)
                 double total = 0.0;
                 I16 cdata = chan_data_raw[i];
                 switch (i) {
-                    case 0:
+                    case (0):
                         UPDATE_AXIS(x, calibration0, i, imu);
                         break;
-                    case 1:
+                    case (1):
                         UPDATE_AXIS(y, calibration1, i, imu);
                         break;
-                    case 2:
+                    case (2):
                         UPDATE_AXIS(z, calibration2, i, imu);
                         break;
-                    case 3:
+                    case (3):
                         UPDATE_AXIS(ax, calibration3, i, imu);
                         break;
-                    case 4:
+                    case (4):
                         UPDATE_AXIS(ay, calibration4, i, imu);
                         break;
-                    case 5:
+                    case (5):
                         UPDATE_AXIS(az, calibration5, i, imu);
                         break;
                 }
@@ -805,9 +808,9 @@ int main(int argc, char **argv)
         if (count > INITIALIZATION_TIMER) {
             Startup = false;
             //leave the following code commented
-            //for (int i = 10 ; i < 10+Chan_sosp; i++)
-            //   ROS_INFO("%d  -  %f", i, cal_offset[i]);
-            //return(0);
+            for (int i = 0 ; i < Chan_sosp; i++)
+               ROS_INFO("%d  -  %f", i, calibrationOffset[i]);
+            return(0);
         }
 
         ros::spinOnce();

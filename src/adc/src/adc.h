@@ -16,6 +16,10 @@
 #define Chan_imu_2 3
 #define Chan_diag 3
 
+#define RANGE_TWO 5
+#define RANGE_THREE 2.5
+#define RANGE_FOUR 1.25
+
 // For the accelerometer and gyroscope constants
 #define AG_MAX_VALUE 32768
 #define AG_REF_VOLTAGE 5
@@ -53,7 +57,7 @@ break; \
 )
 
 // Update a variable and publish it's status, given an index and imu
-#define UPDATE_AXIS(m, calibration, i, imu) ( \
+#define UPDATE_AXIS(m, calibration, index, imu) ( \
 if (filter_imu) { \
 #m.push_back(float(cdata)); \
 BOOST_FOREACH (float reading, #m) \
@@ -62,7 +66,7 @@ total += reading; \
 } \
 cdata = total / #m.size(); \
 } \
-updateImuState(#imu, cdata, #i, #calibration); \
+updateImuState(#imu, cdata, #index, #calibration); \
 )
 
 // Updates the values of the pitch
