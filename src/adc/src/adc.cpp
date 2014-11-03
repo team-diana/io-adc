@@ -562,14 +562,14 @@ int main(int argc, char **argv)
                 }
 
                 // These are 10 selected values from the raw output when the rover is in calibration mode
-                calibrationOffset[10] = 21362;
-                calibrationOffset[11] = 23414;
-                calibrationOffset[12] = 20777;
-                calibrationOffset[13] = 21824;
-                calibrationOffset[14] = 21557;
-                calibrationOffset[15] = 22494;
-                calibrationOffset[16] = 20879;
-                calibrationOffset[17] = 22802;
+                cal_offset[10]=21290;
+                cal_offset[11]=23237;
+                cal_offset[12]=20855;
+                cal_offset[13]=22379;
+                cal_offset[14]=21689;
+                cal_offset[15]=22920;
+                cal_offset[16]=20895;
+                cal_offset[17]=23308;
 
                 double zeroRateV =  calibrationOffset[i+10] * vRef / AG_MAX_VALUE;
                 double sensitivity = IMU2_G / G_CONSTANT; //800mv/g  [V/ m/s^2]
