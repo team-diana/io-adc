@@ -589,9 +589,9 @@ int main(int argc, char **argv)
                 double pitch = -atan2(sosp_x, sqrt(rover_y * rover_y + sosp_z * sosp_z));
 
                 // offset remove
-                sign = copysignf(1.0, rover_z);
-                roll += atan2(rover_y, sign * sqrt(rover_x * rover_x + rover_z * rover_z));
-                pitch += -atan2(rover_x, sqrt(rover_y * rover_y + rover_z * rover_z)) ;
+//                sign = copysignf(1.0, rover_z);
+//                roll += atan2(rover_y, sign * sqrt(rover_x * rover_x + rover_z * rover_z));
+//                pitch += -atan2(rover_x, sqrt(rover_y * rover_y + rover_z * rover_z)) ;
                 sosp_data[i / 2] = pitch;
 
                 double total = 0.0;

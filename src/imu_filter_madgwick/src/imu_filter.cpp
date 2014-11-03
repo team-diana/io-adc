@@ -128,8 +128,8 @@ void ImuFilter::imuCallback(const ImuMsg::ConstPtr& imu_msg_raw)
 //				   }
 //				   sign = (int)(total / sign_b.size() + sgn(total / sign_b.size())*.5);
 //    ROS_INFO("segno %i", sign);
-    roll = atan2(lin_acc.y, sign * sqrt(lin_acc.x*lin_acc.x + lin_acc.z*lin_acc.z));
-    pitch = -atan2(lin_acc.x, sqrt(lin_acc.y*lin_acc.y + lin_acc.z*lin_acc.z));
+    roll = atan2(lin_acc.y, sign * sqrt(lin_acc.x*lin_acc.x + lin_acc.z*lin_acc.z))/2;
+    pitch = -atan2(lin_acc.x, sqrt(lin_acc.y*lin_acc.y + lin_acc.z*lin_acc.z))/2;
     double yaw = 0.0; //TODO resettare in modo diverso!
                         
     tf::Quaternion init_q = tf::createQuaternionFromRPY(roll, pitch, yaw);
