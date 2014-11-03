@@ -8,10 +8,10 @@
 #include "std_msgs/String.h"
 #include "sensor_msgs/Imu.h"
 #include "sensor_msgs/Range.h"
-#include "adc/imu_Adc.h"
-#include "adc/sosp_Adc.h"
-#include "adc/diag_Adc.h"
-#include "adc/movingService.h"
+#include "adc_msg_srv/imu_Adc.h"
+#include "adc_msg_srv/sosp_Adc.h"
+#include "adc_msg_srv/diag_Adc.h"
+#include "adc_msg_srv/movingService.h"
 #include "tf/transform_broadcaster.h"
 #include <boost/circular_buffer.hpp>
 #include <boost/foreach.hpp>
@@ -151,7 +151,7 @@ void updateImuState(sensor_msgs::Imu& imuMsg, I16 chan_data_raw, int i, boost::c
  *      bool: true for successful publishing and fails otherwise
  */
 
-bool movingStatus(adc::movingService::Request &req, adc::movingService::Response &res)
+bool movingStatus(adc_msg_srv::movingService::Request &req, adc_msg_srv::movingService::Response &res)
 {
     isMoving = req.status;
     ros::param::set("/moving", isMoving);
@@ -373,16 +373,16 @@ int main(int argc, char **argv)
     std::copy(cov.begin(), cov.end(), imu.angular_velocity_covariance.begin());
     std::copy(cov2.begin(), cov2.end(), imu.linear_acceleration_covariance.begin());
 
-    ros::Publisher imu_adc_pub = n.advertise<adc::imu_Adc>(topic_imu.c_str(), 100);
+    ros::Publisher imu_adc_pub = n.advertise<adc_msg_srv::imu_Adc>(topic_imu.c_str(), 100);
     ros::Publisher imu_raw_pub = n.advertise<sensor_msgs::Imu>("imu/data_raw", 100);
-    ros::Publisher sosp_adc_pub = n.advertise<adc::sosp_Adc>(topic_sosp.c_str(), 100);
+    ros::Publisher sosp_adc_pub = n.advertise<adc_msg_srv::sosp_Adc>(topic_sosp.c_str(), 100);
     ros::Publisher rangef_pub = n.advertise<sensor_msgs::Range>(topic_rangef.c_str(), 100);
     ros::Publisher rangefd_pub = n.advertise<sensor_msgs::Range>(topic_rangefd.c_str(), 100);
     ros::Publisher rangep_pub = n.advertise<sensor_msgs::Range>(topic_rangep.c_str(), 100);
     ros::Publisher rangepd_pub = n.advertise<sensor_msgs::Range>(topic_rangepd.c_str(), 100);
-    ros::Publisher imu_2_adc_pub = n.advertise<adc::imu_Adc>(topic_imu_2.c_str(), 100);
+    ros::Publisher imu_2_adc_pub = n.advertise<adc_msg_srv::imu_Adc>(topic_imu_2.c_str(), 100);
     ros::Publisher imu_2_raw_pub = n.advertise<sensor_msgs::Imu>("imu_2/data_raw", 100);
-    ros::Publisher diag_adc_pub = n.advertise<adc::diag_Adc>(topic_diag.c_str(), 100);
+    ros::Publisher diag_adc_pub = n.advertise<adc_msg_srv::diag_Adc>(topic_diag.c_str(), 100);
     ros::ServiceServer service = n.advertiseService("Moving_Status", movingStatus);
     ROS_INFO("Ready to go.");
 
@@ -458,7 +458,7 @@ int main(int argc, char **argv)
             }
 
             // Create the IMU message and publish it
-            adc::imu_Adc msg;
+            adc_msg_srv::imu_Adc msg;
             msg.message = message;
             msg.x = chan_data[0];
             msg.y = chan_data[1];
@@ -616,7 +616,7 @@ int main(int argc, char **argv)
             if (count % SAMPLE_FILTERED_EVERY == 0) {
                 ROS_INFO("%s", "sending suspension");
                 // Create suspension message and publish it
-                adc::sosp_Adc msg;
+                adc_msg_srv::sosp_Adc msg;
                 msg.message = message;
                 msg.x1 = chan_data_raw[0];
                 msg.z1 = chan_data_raw[1];
@@ -766,7 +766,7 @@ int main(int argc, char **argv)
             }
 
             // imu2 message
-            adc::imu_Adc msg;
+            adc_msg_srv::imu_Adc msg;
             msg.message = message;
             msg.x = 0;
             msg.y = 0;
@@ -794,7 +794,7 @@ int main(int argc, char **argv)
 
             ROS_INFO("%s", "sending diag");
             // diag message
-            adc::diag_Adc msg;
+            adc_msg_srv::diag_Adc msg;
             msg.message = message;
             msg.gnd = chan_voltage[0];
             msg.v5v = chan_voltage[1];
