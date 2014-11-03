@@ -1,4 +1,0 @@
-package created by Austin Hendrix <ahendrix AT willowgarage DOT
-com> and Wim Meeussen
-available at
-https://github.com/PR2/pr2_robot
