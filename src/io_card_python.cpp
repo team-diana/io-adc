@@ -86,13 +86,13 @@ std::string initModule() {
   return "";
 }
 
-BOOST_PYTHON_MODULE(io_card)
+BOOST_PYTHON_MODULE(io_card_python)
 {
   using namespace boost::python;
 
   def("init", initModule);
 
-  class_<IoCardPython>("io_card", init<>())
+  class_<IoCardPython>("io_card_python", init<>())
     .def("read_port",     &IoCardPython::readPort)
     .def("read_channel",  &IoCardPython::readLine)
     .def("write_port",    &IoCardPython::writePort)
