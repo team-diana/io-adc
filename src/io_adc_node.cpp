@@ -6,7 +6,7 @@
 
 using namespace io_adc;
 
-IoAdcNode::IoAdcNode()
+IoAdcNode::IoAdcNode() : nodeHandle("io_adc")
 {
     ros::NodeHandle private_node_handle("~");
 //     private_node_handle.param("message", message, std::string("NO error"));
@@ -108,7 +108,6 @@ void IoAdcNode::publishSuspension(SuspensionValue suspensionValue1)
 
 
 int main(int argc, char** argv) {
-
   ros::init(argc, argv, "io_adc");
 
   IoAdcNode ioAdcNode;

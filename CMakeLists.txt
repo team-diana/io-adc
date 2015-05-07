@@ -49,10 +49,22 @@ add_executable(io_adc
   src/io_adc_node.cpp
   src/suspension_reader.cpp
 )
+
 target_link_libraries(io_adc ${catkin_LIBRARIES} ${Boost_LIBRARIES} pci_dask m common)
 add_dependencies(io_adc io_adc_gencpp)
 add_dependencies(io_adc common)
 
+add_executable(adc_scope
+  src/adc_scope_node.cpp
+)
+target_link_libraries(adc_scope ${catkin_LIBRARIES} ${Boost_LIBRARIES} pci_dask m common)
+add_dependencies(adc_scope io_adc_gencpp)
+add_dependencies(adc_scope common)
+
 install(TARGETS io_adc
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+install(TARGETS adc_scope
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
