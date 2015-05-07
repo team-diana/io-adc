@@ -94,9 +94,9 @@ BOOST_PYTHON_MODULE(io_card_python)
 
   class_<IoCardPython>("io_card_python", init<>())
     .def("read_port",     &IoCardPython::readPort)
-    .def("read_channel",  &IoCardPython::readLine)
+    .def("read_line",  &IoCardPython::readLine)
     .def("write_port",    &IoCardPython::writePort)
-    .def("write_channel", &IoCardPython::writeLine)
+    .def("write_line", &IoCardPython::writeLine)
     .def("open",  &IoCardPython::open)
     .def("close", &IoCardPython::close);
 

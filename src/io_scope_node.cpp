@@ -56,7 +56,7 @@ void IoScopeNode::run()
     if((err = DO_ReadPort(ioCard, 0, &portValue)) != NoError) {
       log_input_error_dio(0, " while reading port", err);
     }
-   
+
     std::vector<uint8_t> lines;
 
     // From MSB to LSB
@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
   ros::init(argc, argv, "io_scope");
 
   IoScopeNode ioScopeNode;
-  if(ioScopeNode.init()) {
+  if(!ioScopeNode.init()) {
     ROS_ERROR("unable to open IO card, exiting");
     return -1;
   }

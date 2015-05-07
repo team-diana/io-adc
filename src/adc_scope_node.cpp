@@ -106,7 +106,10 @@ int main(int argc, char** argv) {
   ros::init(argc, argv, "adc_scope");
 
   AdcScopeNode adcScopeNode;
-  adcScopeNode.init();
+
+  if(!adcScopeNode.init()) {
+    ROS_ERROR("error in init, exiting");
+  }
 
   adcScopeNode.run();
 }
