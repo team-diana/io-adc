@@ -1,18 +1,18 @@
 <?xml version="1.0"?>
 <package>
-  <name>adc</name>
+  <name>io_adc</name>
   <version>0.4.2</version>
   <description>
     This package attempts to show the features of ROS step-by-step,
     including using messages, servers, parameters, etc.
   </description>
-  <maintainer email="dthomas@osrfoundation.org">Dirk Thomas</maintainer>
+  <maintainer email="clynamen@gmail.com">Vincenzo Giovanni Comito</maintainer>
   <license>BSD</license>
 
-  <url type="website">http://www.ros.org/wiki/adc</url>
-  <url type="bugtracker">https://github.com/ros/ros_tutorials/issues</url>
-  <url type="repository">https://github.com/ros/ros_tutorials</url>
-  <author>Morgan Quigley</author>
+  <url type="website"></url>
+  <url type="bugtracker"></url>
+  <url type="repository"></url>
+  <author>Mattia Marenco</author>
 
   <buildtool_depend>catkin</buildtool_depend>
 
@@ -21,10 +21,14 @@
   <build_depend>roscpp_serialization</build_depend>
   <build_depend>rostime</build_depend>
   <build_depend>std_msgs</build_depend>
+  <build_depend>message_generation</build_depend>
+  <build_depend>team_diana_lib</build_depend>
 
+  <run_depend>message_runtime</run_depend>
   <run_depend>rosconsole</run_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>roscpp_serialization</run_depend>
   <run_depend>rostime</run_depend>
   <run_depend>std_msgs</run_depend>
+  <run_depend>team_diana_lib</run_depend>
 </package>

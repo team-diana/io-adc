@@ -41,16 +41,16 @@
 
 // Set the max range given a boolean expression, the switch case condition, and the variable to modify
 #define SET_MAX_RANGE(bool_exp, switch_case, var) ( \
-if (#bool_exp) { \
-switch (#switch_case) { \
+if (bool_exp) { \
+switch (switch_case) { \
 case(2): \
-#var = RANGE_TWO; \
+var = RANGE_TWO; \
 break; \
 case(3): \
-#var = RANGE_THREE; \
+var = RANGE_THREE; \
 break; \
 case(4): \
-#var = RANGE_FOUR; \
+var = RANGE_FOUR; \
 break; \
 } \
 } \

@@ -8,10 +8,10 @@
 #include "std_msgs/String.h"
 #include "sensor_msgs/Imu.h"
 #include "sensor_msgs/Range.h"
-#include "adc_msg_srv/imu_Adc.h"
-#include "adc_msg_srv/sosp_Adc.h"
-#include "adc_msg_srv/diag_Adc.h"
-#include "adc_msg_srv/movingService.h"
+#include "io_adc/imu_Adc.h"
+#include "io_adc/sosp_Adc.h"
+#include "io_adc/diag_Adc.h"
+#include "io_adc/movingService.h"
 #include "tf/transform_broadcaster.h"
 #include <boost/circular_buffer.hpp>
 #include <boost/foreach.hpp>
@@ -151,7 +151,7 @@ void updateImuState(sensor_msgs::Imu& imuMsg, I16 chan_data_raw, int i, boost::c
  *      bool: true for successful publishing and fails otherwise
  */
 
-bool movingStatus(adc_msg_srv::movingService::Request &req, adc_msg_srv::movingService::Response &res)
+bool movingStatus(io_adc::movingService::Request &req, io_adc::movingService::Response &res)
 {
     isMoving = req.status;
     ros::param::set("/moving", isMoving);
@@ -293,8 +293,8 @@ int main(int argc, char **argv)
         message = "ADC Register_Card error";
         exit(1);
     }
-    
-      if (err = AI_9116_Config(card, P9116_AI_SingEnded|P9116_AI_UserCMMD, P9116_AI_SoftPolling ,0, 0, 0) != NoError) {
+
+    if (err = AI_9116_Config(card, P9116_AI_SingEnded|P9116_AI_UserCMMD, P9116_AI_SoftPolling ,0, 0, 0) != NoError) {
         printf("Config error : error_code: %d \n", err);
         std::stringstream ms;
         ms << "Config error Error: error_code: " << int(err);
@@ -307,14 +307,18 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+    // IMU 2.5V
+    // FINDER 5V
+    // DIAG 5V
+
+
     SET_MAX_RANGE(enable_imu || enable_sosp || enable_imu_2, range_imu, max_voltage);
     SET_MAX_RANGE(enable_range, range_range, max_voltage_range);
     SET_MAX_RANGE(enable_diag, range_diag, max_voltage_diag);
 
-
      /*
      // This should be implemented in the macro SET_MAX_RANGE
-     
+
      if (enable_imu || enable_sosp || enable_imu_2) {
      switch (range_imu) {
      case(2):
@@ -332,7 +336,7 @@ int main(int argc, char **argv)
      //usleep(25000000);
      //DO_WriteLine(dio, 0,0, 0);
      }
-     
+
      if (enable_range) {
      switch (range_range) {
      case(2):
@@ -346,7 +350,7 @@ int main(int argc, char **argv)
      break;
      }
      }
-     
+
      if (enable_diag) {
      switch (range_diag) {
      case(2):
@@ -360,7 +364,7 @@ int main(int argc, char **argv)
      break;
      }
      }*/
-     
+
 
     // FIXME: add documentation to the following overall code functionality
     // TODO: config; fill in IMU data (start at 0 orientation)
@@ -373,16 +377,16 @@ int main(int argc, char **argv)
     std::copy(cov.begin(), cov.end(), imu.angular_velocity_covariance.begin());
     std::copy(cov2.begin(), cov2.end(), imu.linear_acceleration_covariance.begin());
 
-    ros::Publisher imu_adc_pub = n.advertise<adc_msg_srv::imu_Adc>(topic_imu.c_str(), 100);
+    ros::Publisher imu_adc_pub = n.advertise<io_adc::imu_Adc>(topic_imu.c_str(), 100);
     ros::Publisher imu_raw_pub = n.advertise<sensor_msgs::Imu>("imu/data_raw", 100);
-    ros::Publisher sosp_adc_pub = n.advertise<adc_msg_srv::sosp_Adc>(topic_sosp.c_str(), 100);
+    ros::Publisher sosp_adc_pub = n.advertise<io_adc::sosp_Adc>(topic_sosp.c_str(), 100);
     ros::Publisher rangef_pub = n.advertise<sensor_msgs::Range>(topic_rangef.c_str(), 100);
     ros::Publisher rangefd_pub = n.advertise<sensor_msgs::Range>(topic_rangefd.c_str(), 100);
     ros::Publisher rangep_pub = n.advertise<sensor_msgs::Range>(topic_rangep.c_str(), 100);
     ros::Publisher rangepd_pub = n.advertise<sensor_msgs::Range>(topic_rangepd.c_str(), 100);
-    ros::Publisher imu_2_adc_pub = n.advertise<adc_msg_srv::imu_Adc>(topic_imu_2.c_str(), 100);
+    ros::Publisher imu_2_adc_pub = n.advertise<io_adc::imu_Adc>(topic_imu_2.c_str(), 100);
     ros::Publisher imu_2_raw_pub = n.advertise<sensor_msgs::Imu>("imu_2/data_raw", 100);
-    ros::Publisher diag_adc_pub = n.advertise<adc_msg_srv::diag_Adc>(topic_diag.c_str(), 100);
+    ros::Publisher diag_adc_pub = n.advertise<io_adc::diag_Adc>(topic_diag.c_str(), 100);
     ros::ServiceServer service = n.advertiseService("Moving_Status", movingStatus);
     ROS_INFO("Ready to go.");
 
@@ -406,7 +410,7 @@ int main(int argc, char **argv)
             if ((filter_imu_temp != filter_imu) && (filter_imu))
                 count = 0;
         }
-        
+
         if ((enable_imu) && (count_range < CYCLE_RANGE)) {
             for (int i = 0; i < Chan_IMU; i++) {
                 if ((err = AI_ReadChannel(card, i, range_imu, (U16*) &chan_data_raw[i])) != NoError) {
@@ -458,7 +462,7 @@ int main(int argc, char **argv)
             }
 
             // Create the IMU message and publish it
-            adc_msg_srv::imu_Adc msg;
+            io_adc::imu_Adc msg;
             msg.message = message;
             msg.x = chan_data[0];
             msg.y = chan_data[1];
@@ -616,7 +620,7 @@ int main(int argc, char **argv)
             if (count % SAMPLE_FILTERED_EVERY == 0) {
                 ROS_INFO("%s", "sending suspension");
                 // Create suspension message and publish it
-                adc_msg_srv::sosp_Adc msg;
+                io_adc::sosp_Adc msg;
                 msg.message = message;
                 msg.x1 = chan_data_raw[0];
                 msg.z1 = chan_data_raw[1];
@@ -723,7 +727,7 @@ int main(int argc, char **argv)
             if (count_range < CYCLE_RANGE)
                 count_range++;
         }
-        
+
         if ((enable_imu_2) && (count_range < CYCLE_RANGE)) {
             for (int i = 0; i < Chan_imu_2; i++) {
                 if ((err = AI_ReadChannel(card, i + 18, range_sosp, (U16*) &chan_data_raw[i])) != NoError) {
@@ -766,7 +770,7 @@ int main(int argc, char **argv)
             }
 
             // imu2 message
-            adc_msg_srv::imu_Adc msg;
+            io_adc::imu_Adc msg;
             msg.message = message;
             msg.x = 0;
             msg.y = 0;
@@ -794,7 +798,7 @@ int main(int argc, char **argv)
 
             ROS_INFO("%s", "sending diag");
             // diag message
-            adc_msg_srv::diag_Adc msg;
+            io_adc::diag_Adc msg;
             msg.message = message;
             msg.gnd = chan_voltage[0];
             msg.v5v = chan_voltage[1];
@@ -803,7 +807,7 @@ int main(int argc, char **argv)
         }
 
         count++;
-        
+
         // FIXME: what is 1000?   it is a 16s timer for the initialization
         if (count > INITIALIZATION_TIMER) {
             Startup = false;
