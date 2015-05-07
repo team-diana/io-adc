@@ -12,11 +12,16 @@ else()
   message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 endif()
 
-find_package(Boost REQUIRED COMPONENTS date_time thread)
+find_package(PythonInterp)
+find_package(PythonLibs REQUIRED)
+
+find_package(Boost REQUIRED COMPONENTS system date_time thread python)
 find_package(catkin REQUIRED COMPONENTS message_generation std_msgs rostime roscpp rosconsole roscpp_serialization team_diana_lib)
-find_package(Boost REQUIRED COMPONENTS system)
 
 include_directories(${catkin_INCLUDE_DIRS} ./include)
+include_directories(${Boost_INCLUDE_DIRS})
+include_directories(${PYTHON_INCLUDE_DIRS})
+
 link_directories(${catkin_LIBRARY_DIRS})
 
 add_message_files(
@@ -24,6 +29,7 @@ add_message_files(
   imu_Adc.msg
   sosp_Adc.msg
   diag_Adc.msg
+  io_scope.msg
 )
 
 add_service_files(
@@ -45,26 +51,52 @@ link_directories(/usr/lib)
 
 add_library(common src/utils.cpp)
 
+
+install(TARGETS common
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+)
+
 add_executable(io_adc
   src/io_adc_node.cpp
   src/suspension_reader.cpp
 )
 
-target_link_libraries(io_adc ${catkin_LIBRARIES} ${Boost_LIBRARIES} pci_dask m common)
+# NOTE: ${PYTHON_LIBRARY} is not need for the executable, but it avoids meaningless linker errors.
+target_link_libraries(io_adc ${catkin_LIBRARIES} ${Boost_LIBRARIES} pci_dask m common ${PYTHON_LIBRARY})
 add_dependencies(io_adc io_adc_gencpp)
 add_dependencies(io_adc common)
-
-add_executable(adc_scope
-  src/adc_scope_node.cpp
-)
-target_link_libraries(adc_scope ${catkin_LIBRARIES} ${Boost_LIBRARIES} pci_dask m common)
-add_dependencies(adc_scope io_adc_gencpp)
-add_dependencies(adc_scope common)
 
 install(TARGETS io_adc
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
+add_executable(adc_scope
+  src/adc_scope_node.cpp
+)
+target_link_libraries(adc_scope ${catkin_LIBRARIES} ${Boost_LIBRARIES} pci_dask m common ${PYTHON_LIBRARY})
+add_dependencies(adc_scope io_adc_gencpp)
+add_dependencies(adc_scope common)
+
 install(TARGETS adc_scope
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+add_executable(io_scope
+  src/io_scope_node.cpp
+)
+target_link_libraries(io_scope ${catkin_LIBRARIES} ${Boost_LIBRARIES} pci_dask m common ${PYTHON_LIBRARY})
+add_dependencies(io_scope io_adc_gencpp)
+add_dependencies(io_scope common)
+
+
+install(TARGETS io_scope
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+add_library(io_card_python SHARED src/io_card_python.cpp)
+target_link_libraries(io_card_python ${Boost_LIBRARIES} ${PYTHON_LIBRARY} pci_dask)
+set_target_properties(io_card_python PROPERTIES PREFIX "" )
+
+install(TARGETS io_card_python
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )

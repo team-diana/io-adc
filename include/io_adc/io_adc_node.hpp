@@ -5,9 +5,8 @@
 
 #include "ros/node_handle.h"
 
-
 class IoAdcNode {
- 
+
 public:
   IoAdcNode();
   IoAdcNode(const IoAdcNode& oth) = delete;

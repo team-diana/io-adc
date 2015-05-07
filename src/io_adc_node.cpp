@@ -78,11 +78,11 @@ void IoAdcNode::run()
 
   while(ros::ok()) {
     updateSuspensions();
+
+    ros::spinOnce();
   }
 
   ROS_INFO("Stop");
-
-  ros::spinOnce();
 }
 
 void IoAdcNode::updateSuspensions()

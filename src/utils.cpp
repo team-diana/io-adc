@@ -1,4 +1,5 @@
 #include "io_adc/utils.hpp"
+#include "io_adc/dask.h"
 
 #include <team_diana_lib/strings/strings.h>
 
@@ -46,5 +47,25 @@ namespace io_adc {
     ROS_ERROR("Error while registering card: %s %s", msg.c_str(), getErrorString(error_enum_value).c_str());
   }
 
+  int voltageRangeDoubleToEnum(float voltageRange, RangeType rangeType)
+  {
+    if(rangeType == RangeType::bipolar) {
+      if(voltageRange <= 1.25+0.001) {
+        return AD_B_1_25_V;
+      } else if(voltageRange <= 2.5+0.001) {
+        return AD_B_2_5_V;
+      } else if (voltageRange <= 5.0+0.001) {
+        return AD_B_0_5_V;
+      }
+    } else if (rangeType == RangeType::unipolar) {
+      if(voltageRange <= 1.25+0.001) {
+        return AD_U_1_25_V;
+      } else if(voltageRange <= 2.5+0.001) {
+        return AD_U_2_5_V;
+      } else if (voltageRange <= 5.0+0.001) {
+        return AD_U_0_5_V;
+      }
+    }
+  }
 
 }

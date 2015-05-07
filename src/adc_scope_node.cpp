@@ -21,9 +21,26 @@ AdcScopeNode::AdcScopeNode() : nodeHandle("adc_scope")
     i++;
   });
 
+  ros::NodeHandle private_node_handle("~");
+
+  std::cout << "--- PORT CONFIGURATION --- "<< std::endl;
   std::for_each(voltageRanges.begin(), voltageRanges.end(), [&](uint16_t& range) {
-    range = AD_B_2_5_V;
+    double voltageRange;
+    bool unipolar;
+
+    private_node_handle.param(Td::toString("voltage_range_", i), voltageRange, 2.5);
+    private_node_handle.param(Td::toString("voltage_range_", i, "_unipolar"), unipolar, false);
+
+    if(unipolar) {
+      range = voltageRangeDoubleToEnum(voltageRange, RangeType::unipolar);
+      std::cout << "port " << i << " UNIPOLAR range " << voltageRange << std::endl;
+    } else {
+      range = voltageRangeDoubleToEnum(voltageRange, RangeType::bipolar);
+      std::cout << "port " << i << " BIPOLAR range " << voltageRange << std::endl;
+    }
   });
+  std::cout << std::endl << "-------------------------- "<< std::endl;
+
 }
 
 AdcScopeNode::~AdcScopeNode()
@@ -78,11 +95,10 @@ void AdcScopeNode::run()
       rawPublishers[i].publish(msg);
     }
 
+    ros::spinOnce();
   }
 
   ROS_INFO("Stop");
-
-  ros::spinOnce();
 }
 
 
