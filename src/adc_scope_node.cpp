@@ -81,13 +81,15 @@ void AdcScopeNode::run()
   ROS_INFO("Run");
 
   while(ros::ok()) {
-    std::array<uint16_t, ADC_ANALOG_INPUT_PORTS_NUM> rawIntegerValues;
+    std::array<int16_t, ADC_ANALOG_INPUT_PORTS_NUM> rawIntegerValues;
     std::array<float, ADC_ANALOG_INPUT_PORTS_NUM> rawValues;
 
     for(auto i : boost::irange(0, ADC_ANALOG_INPUT_PORTS_NUM)) {
       uint16_t err;
-      if ((err = AI_ReadChannel(adcCard, i, voltageRanges[i], &rawIntegerValues[i])) != NoError) {
+      AI
+      if ((err = AI_ReadChannel(adcCard, i, voltageRanges[i], (uint16_t*)&rawIntegerValues[i])) != NoError) {
         log_input_error_adc(i, "while reading raw value", err);
+      } else {
         rawValues[i] = rawIntegerValues[i];
       }
     }
