@@ -24,6 +24,7 @@ AdcScopeNode::AdcScopeNode() : nodeHandle("adc_scope")
   ros::NodeHandle private_node_handle("~");
 
   std::cout << "--- PORT CONFIGURATION --- "<< std::endl;
+  i = 0;
   std::for_each(voltageRanges.begin(), voltageRanges.end(), [&](uint16_t& range) {
     double voltageRange;
     bool unipolar;
@@ -38,7 +39,9 @@ AdcScopeNode::AdcScopeNode() : nodeHandle("adc_scope")
       range = voltageRangeDoubleToEnum(voltageRange, RangeType::bipolar);
       std::cout << "port " << i << " BIPOLAR range " << voltageRange << std::endl;
     }
+    i++;
   });
+
   std::cout << std::endl << "-------------------------- "<< std::endl;
 
 }
