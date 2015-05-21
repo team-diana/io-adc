@@ -86,8 +86,7 @@ void AdcScopeNode::run()
 
     for(auto i : boost::irange(0, ADC_ANALOG_INPUT_PORTS_NUM)) {
       uint16_t err;
-      AI
-      if ((err = AI_ReadChannel(adcCard, i, voltageRanges[i], (uint16_t*)&rawIntegerValues[i])) != NoError) {
+      if ((err = AI_ReadChannel(adcCard, i, voltageRanges[i], (uint16_t*)&rawIntegerValues[i]) ) != NoError) {
         log_input_error_adc(i, "while reading raw value", err);
       } else {
         rawValues[i] = rawIntegerValues[i];
