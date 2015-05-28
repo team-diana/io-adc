@@ -5,6 +5,16 @@
 
 namespace io_adc {
 
+    enum VoltageRange {
+      B_10_V    = 1,
+      B_5_V     = 2,
+      B_2_5_V   = 3,
+      B_1_25_V  = 4,
+      U_10_V    = 15,
+      U_5_V     = 16,
+      U_2_5_V   = 17,
+      U_1_25_V  = 18
+    };
 }
 
 

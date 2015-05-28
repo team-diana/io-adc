@@ -26,17 +26,17 @@ AdcScopeNode::AdcScopeNode() : nodeHandle("adc_scope")
   std::cout << "--- PORT CONFIGURATION --- "<< std::endl;
   i = 0;
   std::for_each(voltageRanges.begin(), voltageRanges.end(), [&](uint16_t& range) {
-    double voltageRange;
+    std::string voltageRange;
     bool unipolar;
 
-    private_node_handle.param(Td::toString("voltage_range_", i), voltageRange, 2.5);
+    private_node_handle.param(Td::toString("voltage_range_", i), voltageRange, std::string("2.5"));
     private_node_handle.param(Td::toString("voltage_range_", i, "_unipolar"), unipolar, false);
 
     if(unipolar) {
-      range = voltageRangeDoubleToEnum(voltageRange, RangeType::unipolar);
+      range = voltageRangeToEnum(voltageRange, RangeType::unipolar);
       std::cout << "port " << i << " UNIPOLAR range " << voltageRange << std::endl;
     } else {
-      range = voltageRangeDoubleToEnum(voltageRange, RangeType::bipolar);
+      range = voltageRangeToEnum(voltageRange, RangeType::bipolar);
       std::cout << "port " << i << " BIPOLAR range " << voltageRange << std::endl;
     }
     i++;

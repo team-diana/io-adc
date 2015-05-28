@@ -17,7 +17,7 @@ namespace io_adc {
 //     void log_error(std::string cardName, std::string type, uint16_t port, std::string msg = "", uint16_t error_enum_value);
 
     // Return greater or equal voltage range supported.
-    int voltageRangeDoubleToEnum(float voltageRange, RangeType rangeType);
+    int voltageRangeToEnum(const std::string& voltageRange, RangeType rangeType);
 }
 
 #endif // IO_ADC_UTILS_HPP

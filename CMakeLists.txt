@@ -100,3 +100,11 @@ set_target_properties(io_card_python PROPERTIES PREFIX "" )
 install(TARGETS io_card_python
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
+
+add_library(adc_card_python SHARED src/adc_card_python.cpp)
+target_link_libraries(adc_card_python ${Boost_LIBRARIES} ${PYTHON_LIBRARY} pci_dask)
+set_target_properties(adc_card_python PROPERTIES PREFIX "" )
+
+install(TARGETS adc_card_python
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+)

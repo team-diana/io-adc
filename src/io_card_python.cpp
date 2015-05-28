@@ -14,7 +14,7 @@ IoCardPython::IoCardPython()
 
 IoCardPython::~IoCardPython()
 {
-  close();
+  //close();
 }
 
 void IoCardPython::open()

@@ -5,6 +5,8 @@
 
 #include "ros/ros.h"
 
+#include <string>
+
 namespace io_adc {
 
   std::string getErrorString(uint16_t errorEnumValue) {
@@ -47,25 +49,27 @@ namespace io_adc {
     ROS_ERROR("Error while registering card: %s %s", msg.c_str(), getErrorString(error_enum_value).c_str());
   }
 
-  int voltageRangeDoubleToEnum(float voltageRange, RangeType rangeType)
+  int voltageRangeToEnum(const std::string& voltageRange, RangeType rangeType)
   {
     if(rangeType == RangeType::bipolar) {
-      if(voltageRange <= 1.25+0.001) {
+      if(voltageRange == "1.25") {
         return AD_B_1_25_V;
-      } else if(voltageRange <= 2.5+0.001) {
+      } else if(voltageRange == "2.5") {
         return AD_B_2_5_V;
-      } else if (voltageRange <= 5.0+0.001) {
+      } else if (voltageRange == "5") {
         return AD_B_0_5_V;
       }
     } else if (rangeType == RangeType::unipolar) {
-      if(voltageRange <= 1.25+0.001) {
+      if(voltageRange == "1.25") {
         return AD_U_1_25_V;
-      } else if(voltageRange <= 2.5+0.001) {
+      } else if(voltageRange == "2.5") {
         return AD_U_2_5_V;
-      } else if (voltageRange <= 5.0+0.001) {
+      } else if (voltageRange == "5") {
         return AD_U_0_5_V;
       }
     }
+    throw std::runtime_error("unknown voltage range");
+    return -1;
   }
 
 }
