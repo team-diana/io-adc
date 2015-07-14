@@ -12,7 +12,7 @@ public:
   AdcCardPython();
   ~AdcCardPython();
 
-  void open();
+  int open(uint16_t mode, uint16_t trigMode);
   void close();
 
   int32_t readChannelRaw(uint32_t channel, io_adc::VoltageRange range);

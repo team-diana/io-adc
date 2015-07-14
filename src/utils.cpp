@@ -51,13 +51,14 @@ namespace io_adc {
 
   int voltageRangeToEnum(const std::string& voltageRange, RangeType rangeType)
   {
+    // NOTE: Other option are available but not listed here
     if(rangeType == RangeType::bipolar) {
       if(voltageRange == "1.25") {
         return AD_B_1_25_V;
       } else if(voltageRange == "2.5") {
         return AD_B_2_5_V;
       } else if (voltageRange == "5") {
-        return AD_B_0_5_V;
+        return AD_B_5_V;
       }
     } else if (rangeType == RangeType::unipolar) {
       if(voltageRange == "1.25") {
@@ -65,7 +66,7 @@ namespace io_adc {
       } else if(voltageRange == "2.5") {
         return AD_U_2_5_V;
       } else if (voltageRange == "5") {
-        return AD_U_0_5_V;
+        return AD_U_5_V;
       }
     }
     throw std::runtime_error("unknown voltage range");

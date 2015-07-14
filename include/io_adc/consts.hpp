@@ -3,6 +3,8 @@
 
 #define ADC_ANALOG_INPUT_PORTS_NUM 64
 
+// Redefinition of some costant, for easier lookup
+
 namespace io_adc {
 
     enum VoltageRange {
@@ -15,6 +17,7 @@ namespace io_adc {
       U_2_5_V   = 17,
       U_1_25_V  = 18
     };
+
 }
 
 

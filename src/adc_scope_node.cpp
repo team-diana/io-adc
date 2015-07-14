@@ -10,6 +10,7 @@
 #include <team_diana_lib/strings/strings.h>
 
 #include <algorithm>
+#include <thread>
 
 using namespace io_adc;
 
@@ -21,18 +22,30 @@ AdcScopeNode::AdcScopeNode() : nodeHandle("adc_scope")
     i++;
   });
 
-  ros::NodeHandle private_node_handle("~");
 
   std::cout << "--- PORT CONFIGURATION --- "<< std::endl;
   i = 0;
+
+  bool unipolar;
+  nodeHandle.param(Td::toString("unipolar"), unipolar, false);
+
+  int pause;
+  nodeHandle.param(Td::toString("pause_micro_seconds"), pause, 0);
+  sleepTime = std::chrono::microseconds(pause);
+
+  if(unipolar) {
+    rangeType = RangeType::unipolar;
+  } else {
+    rangeType = RangeType::bipolar;
+  }
+
   std::for_each(voltageRanges.begin(), voltageRanges.end(), [&](uint16_t& range) {
     std::string voltageRange;
-    bool unipolar;
 
-    private_node_handle.param(Td::toString("voltage_range_", i), voltageRange, std::string("2.5"));
-    private_node_handle.param(Td::toString("voltage_range_", i, "_unipolar"), unipolar, false);
+    std::string paramName = Td::toString("voltage_range_", i);
+    nodeHandle.param(paramName, voltageRange, std::string("2.5"));
 
-    if(unipolar) {
+    if(rangeType == RangeType::unipolar) {
       range = voltageRangeToEnum(voltageRange, RangeType::unipolar);
       std::cout << "port " << i << " UNIPOLAR range " << voltageRange << std::endl;
     } else {
@@ -65,7 +78,7 @@ bool AdcScopeNode::init()
     }
 
     ROS_INFO("Setup PCI_9116");
-    if ((err = AI_9116_Config(adcCard, P9116_AI_SingEnded|P9116_AI_UserCMMD, P9116_AI_SoftPolling ,0, 0, 0)) != NoError) {
+    if ((err = AI_9116_Config(adcCard, P9116_AI_UserCMMD|P9116_AI_UniPolar, P9116_AI_SoftPolling ,0, 0, 0)) != NoError) {
         log_register_card_error("PCI_9116 configure error", err);
         return false;
     }
@@ -82,23 +95,24 @@ void AdcScopeNode::run()
 
   while(ros::ok()) {
     std::array<int16_t, ADC_ANALOG_INPUT_PORTS_NUM> rawIntegerValues;
-    std::array<float, ADC_ANALOG_INPUT_PORTS_NUM> rawValues;
 
     for(auto i : boost::irange(0, ADC_ANALOG_INPUT_PORTS_NUM)) {
       uint16_t err;
       if ((err = AI_ReadChannel(adcCard, i, voltageRanges[i], (uint16_t*)&rawIntegerValues[i]) ) != NoError) {
         log_input_error_adc(i, "while reading raw value", err);
-      } else {
-        rawValues[i] = rawIntegerValues[i];
+        rawIntegerValues[i] = 0;
       }
     }
 
     for(auto i : boost::irange(0, ADC_ANALOG_INPUT_PORTS_NUM)) {
       std_msgs::Float32 msg;
-      msg.data = rawValues[i];
+      double converted;
+      AI_VoltScale(adcCard, voltageRanges[i], rawIntegerValues[i], &converted);
+      msg.data = converted;
       rawPublishers[i].publish(msg);
     }
 
+    std::this_thread::sleep_for(sleepTime);
     ros::spinOnce();
   }
 
