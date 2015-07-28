@@ -20,8 +20,12 @@ private:
   std::array<ros::Publisher, 64> rawPublishers;
   std::array<uint16_t, 64> voltageRanges;
   uint16_t adcCard;
-  io_adc::RangeType rangeType;
+  io_adc::P9116Params p9116Params;
   std::chrono::microseconds sleepTime;
+
+
+  bool localGnd = false;
+  bool userCMMD = false;
 
 };
 

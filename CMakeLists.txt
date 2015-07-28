@@ -30,6 +30,7 @@ add_message_files(
   sosp_Adc.msg
   diag_Adc.msg
   io_scope.msg
+  wheel_motor_temperature.msg
 )
 
 add_service_files(

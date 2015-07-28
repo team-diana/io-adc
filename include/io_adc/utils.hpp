@@ -3,10 +3,25 @@
 
 #include <string>
 
+#include <ros/ros.h>
+
 namespace io_adc {
     enum class RangeType {
       bipolar,
       unipolar
+    };
+
+    enum class AdcMode {
+      localGND,
+      userCMMD,
+      differential
+    };
+
+    struct P9116Params {
+      AdcMode adcMode;
+      RangeType rangeType;
+
+      uint16_t getConfigCtrlValue() const;
     };
 
     void log_input_error_adc(uint16_t port, const std::string& msg, uint16_t error_enum_value);
@@ -18,6 +33,11 @@ namespace io_adc {
 
     // Return greater or equal voltage range supported.
     int voltageRangeToEnum(const std::string& voltageRange, RangeType rangeType);
+    AdcMode adcModeFromString(const std::string& mode);
+
+    P9116Params getP9116ParamsFromRosParams(const ros::NodeHandle& nodeHandle );
+    void checkParamExistenceOrExit(const ros::NodeHandle, const std::string& paramName);
+
 }
 
 #endif // IO_ADC_UTILS_HPP

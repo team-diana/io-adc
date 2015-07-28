@@ -2,6 +2,7 @@
 #include "io_adc/dask.h"
 
 #include <team_diana_lib/strings/strings.h>
+#include <team_diana_lib/logging/logging.h>
 
 #include "ros/ros.h"
 
@@ -71,6 +72,71 @@ namespace io_adc {
     }
     throw std::runtime_error("unknown voltage range");
     return -1;
+  }
+
+  AdcMode adcModeFromString(const std::string& mode) {
+    std::string adcModeStr = mode;
+    if(adcModeStr == "userCMMD") {
+      return AdcMode::userCMMD;
+    } else if(adcModeStr == "localGND") {
+      return  AdcMode::localGND ;
+    } else if (adcModeStr == "differential"){
+      return AdcMode::differential;
+    } else {
+      throw std::runtime_error(Td::toString("UNKOWN adc_mode: ",  adcModeStr ));
+    }
+  }
+
+  P9116Params getP9116ParamsFromRosParams(const ros::NodeHandle& nodeHandle)  {
+    bool unipolar;
+    nodeHandle.param(std::string("unipolar"), unipolar, false);
+
+    std::string adcModeStr;
+    nodeHandle.param(std::string("adc_mode"), adcModeStr, std::string("userCMMD"));
+
+    std::cout << "Enabling " << adcModeStr << " Mode" << std::endl;
+
+    P9116Params params;
+
+    params.adcMode = adcModeFromString(adcModeStr);
+    if(unipolar) {
+      params.rangeType = RangeType::unipolar;
+    } else {
+      params.rangeType = RangeType::bipolar;
+    }
+
+    return params;
+  }
+
+  uint16_t P9116Params::getConfigCtrlValue() const {
+    uint16_t mode = 0;
+    switch(adcMode) {
+      case AdcMode::userCMMD:
+        mode = P9116_AI_UserCMMD;
+        break;
+      case AdcMode::localGND:
+        mode = P9116_AI_LocalGND;
+        break;
+      case AdcMode::differential:
+        mode = P9116_AI_Differential;
+        break;
+    }
+
+    uint16_t polarity = 0;
+    if(rangeType == RangeType::bipolar) {
+      polarity |= P9116_AI_BiPolar;
+    } else {
+      polarity |= P9116_AI_UniPolar;
+    }
+
+    return mode|polarity;
+  }
+
+  void checkParamExistenceOrExit(const ros::NodeHandle nodeHandle, const std::string& paramName) {
+    if(!nodeHandle.hasParam(paramName)) {
+      Td::ros_error(Td::toString("Unable to find param \"", paramName, "\""));
+      exit(-1);
+    }
   }
 
 }

@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <thread>
+#include <string>
 
 using namespace io_adc;
 
@@ -26,18 +27,11 @@ AdcScopeNode::AdcScopeNode() : nodeHandle("adc_scope")
   std::cout << "--- PORT CONFIGURATION --- "<< std::endl;
   i = 0;
 
-  bool unipolar;
-  nodeHandle.param(Td::toString("unipolar"), unipolar, false);
-
   int pause;
   nodeHandle.param(Td::toString("pause_micro_seconds"), pause, 0);
   sleepTime = std::chrono::microseconds(pause);
 
-  if(unipolar) {
-    rangeType = RangeType::unipolar;
-  } else {
-    rangeType = RangeType::bipolar;
-  }
+  p9116Params = getP9116ParamsFromRosParams(nodeHandle);
 
   std::for_each(voltageRanges.begin(), voltageRanges.end(), [&](uint16_t& range) {
     std::string voltageRange;
@@ -45,7 +39,7 @@ AdcScopeNode::AdcScopeNode() : nodeHandle("adc_scope")
     std::string paramName = Td::toString("voltage_range_", i);
     nodeHandle.param(paramName, voltageRange, std::string("2.5"));
 
-    if(rangeType == RangeType::unipolar) {
+    if(p9116Params.rangeType == RangeType::unipolar) {
       range = voltageRangeToEnum(voltageRange, RangeType::unipolar);
       std::cout << "port " << i << " UNIPOLAR range " << voltageRange << std::endl;
     } else {
@@ -56,7 +50,6 @@ AdcScopeNode::AdcScopeNode() : nodeHandle("adc_scope")
   });
 
   std::cout << std::endl << "-------------------------- "<< std::endl;
-
 }
 
 AdcScopeNode::~AdcScopeNode()
@@ -78,7 +71,7 @@ bool AdcScopeNode::init()
     }
 
     ROS_INFO("Setup PCI_9116");
-    if ((err = AI_9116_Config(adcCard, P9116_AI_UserCMMD|P9116_AI_UniPolar, P9116_AI_SoftPolling ,0, 0, 0)) != NoError) {
+    if ((err = AI_9116_Config(adcCard, p9116Params.getConfigCtrlValue(), P9116_AI_SoftPolling ,0, 0, 0)) != NoError) {
         log_register_card_error("PCI_9116 configure error", err);
         return false;
     }
