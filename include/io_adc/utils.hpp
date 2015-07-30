@@ -22,6 +22,7 @@ namespace io_adc {
       RangeType rangeType;
 
       uint16_t getConfigCtrlValue() const;
+      std::string toString() const;
     };
 
     void log_input_error_adc(uint16_t port, const std::string& msg, uint16_t error_enum_value);
@@ -37,6 +38,9 @@ namespace io_adc {
 
     P9116Params getP9116ParamsFromRosParams(const ros::NodeHandle& nodeHandle );
     void checkParamExistenceOrExit(const ros::NodeHandle, const std::string& paramName);
+
+    const char* toString(AdcMode mode);
+    const char* toString(RangeType rangeType);
 
 }
 

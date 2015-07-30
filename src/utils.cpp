@@ -132,11 +132,36 @@ namespace io_adc {
     return mode|polarity;
   }
 
+  std::string P9116Params::toString() const
+  {
+    return Td::toString("P9116Params{", io_adc::toString(adcMode), "-" , io_adc::toString(rangeType), "}");
+  }
+
   void checkParamExistenceOrExit(const ros::NodeHandle nodeHandle, const std::string& paramName) {
     if(!nodeHandle.hasParam(paramName)) {
       Td::ros_error(Td::toString("Unable to find param \"", paramName, "\""));
       exit(-1);
     }
+  }
+
+  const char* toString(AdcMode mode)
+  {
+    switch(mode) {
+      case AdcMode::localGND     : return "localGND";
+      case AdcMode::userCMMD     : return "userCMMD";
+      case AdcMode::differential : return "differential";
+      default: return "UNKNOWN";
+    }
+  }
+
+  const char* toString(RangeType rangeType)
+  {
+    switch (rangeType)
+    {
+        case RangeType::unipolar : return "unipolar";
+        case RangeType::bipolar : return "bipolar";
+        default: return "UNKNOWN";
+    };
   }
 
 }

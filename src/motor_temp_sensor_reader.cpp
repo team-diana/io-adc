@@ -41,9 +41,7 @@ void MotorTempSensorReader::publishNewValues()
   }
   io_adc::wheel_motor_temperature msg;
   msg.temp = temps;
-  ROS_INFO("PUBLISH START");
   motorTemperaturePublisher.publish(msg);
-  ROS_INFO("PUBLISH END");
 }
 
 
@@ -66,10 +64,9 @@ void MotorTempSensorReader::setup(ros::NodeHandle nodeHandle)
       nodeHandle.param(baseTempV, motTempSensCalibrations[i].baseTempVolt, 0.0);
       nodeHandle.param(dangerV, motTempSensCalibrations[i].dangerVolt, 0.0);
       nodeHandle.param(tempVoltDiff, motTempSensCalibrations[i].tempVoltDiff, 0.0);
-      motorTemperaturePublisher = nodeHandle.advertise<io_adc::wheel_motor_temperature>(
-        Td::toString("motor_temperature_sensor"), 100);
     }
-
+    motorTemperaturePublisher = nodeHandle.advertise<io_adc::wheel_motor_temperature>(
+      Td::toString("motor_temperature_sensor"), 100);
 }
 
 }

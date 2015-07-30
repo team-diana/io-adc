@@ -6,6 +6,7 @@
 #include "io_adc/wheel_motor_temperature.h"
 
 #include <team_diana_lib/strings/strings.h>
+#include <team_diana_lib/logging/logging.h>
 #include <thread>
 
 using namespace io_adc;
@@ -32,25 +33,28 @@ bool IoAdcNode::init()
 {
     uint16_t err;
 
-    ROS_INFO("Init PCI_9116");
+    Td::ros_info("Init PCI_9116");
     if ((adcCard = Register_Card(PCI_9116, 0)) < 0) {
         log_register_card_error("PCI_9116", adcCard);
         return false;
     }
 
-    ROS_INFO("Setup PCI_9116");
+    Td::ros_info(Td::toString("Setup PCI_9116: ", P9116Params.toString()));
     if ((err = AI_9116_Config(adcCard, P9116Params.getConfigCtrlValue(), P9116_AI_SoftPolling ,0, 0, 0)) != NoError) {
         log_register_card_error("PCI_9116 configure error", err);
         return false;
     }
 
-    ROS_INFO("Init PCI_7432");
+    Td::ros_info("Init PCI_7432");
     if ((ioCard = Register_Card(PCI_7432, 0)) < 0) {
         log_register_card_error("pCI_7432", ioCard);
         return false;
     }
 
-    ROS_INFO("Init done");
+    Td::ros_info("Setup readers");
+    setupReaders();
+
+    Td::ros_info("Init done");
 
     return true;
 }
