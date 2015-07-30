@@ -25,7 +25,7 @@ void MotorTempSensorReader::readNewValues(uint16_t adcCard)
       log_input_error_adc(i, "while reading raw value", err);
     } else {
       AI_VoltScale(adcCard, range, rawValue, &converted);
-      motTempBuffers[i].append(rawValue);
+      motTempBuffers[i].append(converted);
     }
   }
 }
