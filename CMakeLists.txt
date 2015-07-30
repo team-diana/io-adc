@@ -57,9 +57,12 @@ install(TARGETS common
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
 
+target_link_libraries(common ${catkin_LIBRARIES} ${Boost_LIBRARIES} pci_dask m common ${PYTHON_LIBRARY})
+
 add_executable(io_adc
   src/io_adc_node.cpp
   src/suspension_reader.cpp
+  src/motor_temp_sensor_reader.cpp
 )
 
 # NOTE: ${PYTHON_LIBRARY} is not need for the executable, but it avoids meaningless linker errors.

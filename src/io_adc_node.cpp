@@ -10,14 +10,12 @@
 
 using namespace io_adc;
 
-enum  {
-  MOTOR_TEMP_SENS_PIN_BASE = 13
-};
-
 IoAdcNode::IoAdcNode() : nodeHandle("io_adc")
 {
     P9116Params = getP9116ParamsFromRosParams(nodeHandle);
-
+    int sleepTimeMs;
+    nodeHandle.param("sleep_time_ms", sleepTimeMs, 100);
+    sleepTime = std::chrono::milliseconds(sleepTimeMs);
     suspensionPublisher = nodeHandle.advertise<io_adc::sosp_Adc>("sospension_absolute", 100);
 }
 
@@ -86,7 +84,7 @@ void IoAdcNode::run()
         updateSuspensions();
         motorTempSensor.readNewValues(adcCard);
         motorTempSensor.publishNewValues();
-        usleep(1000);
+        std::this_thread::sleep_for(sleepTime);
         ros::spinOnce();
     }
 
@@ -111,17 +109,8 @@ void IoAdcNode::publishSuspension(SuspensionValue suspensionValue1)
     msg.x1 = suspensionValue1.x;
     msg.z1 = suspensionValue1.z;
 
-    suspensionPublisher.publish(msg);
+//     suspensionPublisher.publish(msg);
 }
-
-void IoAdcNode::updateMotorTemperatureSensor()
-{
-  io_adc::wheel_motor_temperature msg;
-
-
-}
-
-
 
 int main(int argc, char** argv) {
     ros::init(argc, argv, "io_adc");
@@ -135,60 +124,3 @@ int main(int argc, char** argv) {
     ioAdcNode.run();
 }
 
-void MotorTempSensor::readNewValues(uint16_t adcCard)
-{
-  for(int i = 0; i < 4; i++) {
-    uint16_t err;
-    int16_t rawValue;
-    uint16_t range = AD_U_5_V;
-    double converted;
-
-    if ((err = AI_ReadChannel(adcCard, MOTOR_TEMP_SENS_PIN_BASE+i,
-          range, (uint16_t*)&rawValue) ) != NoError) {
-      log_input_error_adc(i, "while reading raw value", err);
-    } else {
-      AI_VoltScale(adcCard, range, rawValue, &converted);
-      motTempBuffers[i].append(rawValue);
-    }
-  }
-}
-
-void MotorTempSensor::publishNewValues()
-{
-  std::vector<float> temps;
-  for(int i = 0; i < 4; i++) {
-    float avg = motTempBuffers[i].average();
-    float temp = motTempSensCalibrations[i].baseTemp +
-      (motTempSensCalibrations[i].baseTempVolt - avg) * motTempSensCalibrations[i].tempVoltDiff;
-    temps.push_back(temp);
-  }
-  io_adc::wheel_motor_temperature msg;
-  msg.temp = temps;
-  motorTemperaturePublisher.publish(msg);
-}
-
-
-void MotorTempSensor::setup(ros::NodeHandle nodeHandle)
-{
-    for(int i = 0; i<4; i++) {
-      std::string base = Td::toString("temp_sensor_calibration_motor_", i, "/");
-
-      auto baseTemp = base + "base_temp";
-      auto baseTempV = base + "base_temp_v";
-      auto dangerV = base + "danger_v";
-      auto tempVoltDiff = base + "temp_volt_diff";
-
-      checkParamExistenceOrExit(nodeHandle, baseTemp);
-      checkParamExistenceOrExit(nodeHandle, baseTempV);
-      checkParamExistenceOrExit(nodeHandle, dangerV);
-      checkParamExistenceOrExit(nodeHandle, tempVoltDiff);
-
-      nodeHandle.param(baseTemp, motTempSensCalibrations[i].baseTemp, 0.0);
-      nodeHandle.param(baseTempV, motTempSensCalibrations[i].baseTempVolt, 0.0);
-      nodeHandle.param(dangerV, motTempSensCalibrations[i].dangerVolt, 0.0);
-      nodeHandle.param(tempVoltDiff, motTempSensCalibrations[i].tempVoltDiff, 0.0);
-      motorTemperaturePublisher = nodeHandle.advertise<io_adc::wheel_motor_temperature>(
-        Td::toString("motor_temperature_sensor"), 100);
-    }
-
-}

@@ -2,7 +2,7 @@
 
 namespace io_adc {
 
-struct MotorTemperatureSensorCalibration {
+struct MotorTempSensorCalibration {
   double baseTemp;
   double tempVoltDiff;
   double baseTempVolt;
