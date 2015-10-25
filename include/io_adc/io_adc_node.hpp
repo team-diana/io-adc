@@ -4,6 +4,8 @@
 #include "io_adc/suspension_reader.hpp"
 #include "io_adc/motor_temp_sensor_reader.hpp"
 #include "io_adc/utils.hpp"
+#include "io_adc/OnOffService.h"
+#include "io_adc/current_reader.hpp"
 
 #include "ros/node_handle.h"
 
@@ -24,13 +26,17 @@ public:
 
 private:
 
-  void setupReaders();
+  bool setupReaders();
   void setupMotorTemperatureSensorReaders();
-  void setupSuspensionReaders();
+  bool setupSuspensionReaders();
+  bool setupCurrentReaders();
 
   void updateMotorTemperatureSensor();
   void updateSuspensions();
   void publishSuspension(SuspensionValue suspension1Value);
+  bool setEnableSuspensionPowerCallback(io_adc::OnOffService::Request& req,
+                                io_adc::OnOffService::Response& res);
+
 
 private:
     ros::NodeHandle nodeHandle;
@@ -42,9 +48,18 @@ private:
     io_adc::MotorTempSensorReader motorTempSensor;
 
     ros::Publisher suspensionPublisher;
+    ros::Publisher suspensionCurrentPublisher;
+    ros::Publisher elmoCurrentPublisher;
+    ros::Publisher switchCurrentPublisher;
+    ros::Publisher pantiltCurrentPublisher;
+    ros::Publisher cPCICurrentPublisher;
+
+    ros::ServiceServer enableSuspensionPower;
+
 
     // back right
     std::unique_ptr<SuspensionReader> suspenionReader1;
+    CurrentReader currentReader;
 
 };
 

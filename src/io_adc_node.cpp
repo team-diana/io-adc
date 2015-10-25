@@ -10,6 +10,7 @@
 #include <thread>
 
 using namespace io_adc;
+using namespace std;
 
 IoAdcNode::IoAdcNode() : nodeHandle("io_adc")
 {
@@ -18,7 +19,10 @@ IoAdcNode::IoAdcNode() : nodeHandle("io_adc")
     nodeHandle.param("sleep_time_ms", sleepTimeMs, 100);
     sleepTime = std::chrono::milliseconds(sleepTimeMs);
     suspensionPublisher = nodeHandle.advertise<io_adc::sosp_Adc>("sospension_absolute", 100);
+    enableSuspensionPower = nodeHandle.advertiseService("enable_suspension_power",
+                                                &IoAdcNode::setEnableSuspensionPowerCallback, this);
 }
+
 
 IoAdcNode::~IoAdcNode()
 {
@@ -52,20 +56,29 @@ bool IoAdcNode::init()
     }
 
     Td::ros_info("Setup readers");
-    setupReaders();
+    if(!setupReaders()) {
+      Td::ros_error("Invalid configuration");
+      return false;
+    }
 
     Td::ros_info("Init done");
 
     return true;
 }
 
-void IoAdcNode::setupReaders()
+bool IoAdcNode::setupReaders()
 {
-    setupSuspensionReaders();
+    if(!setupSuspensionReaders()) {
+      return false;
+    }
+    if(!setupCurrentReaders()) {
+      return false;
+    }
     motorTempSensor.setup(nodeHandle);
+    return true;
 }
 
-void IoAdcNode::setupSuspensionReaders()
+bool IoAdcNode::setupSuspensionReaders()
 {
     ros::NodeHandle privateNodehandle("~");
 
@@ -78,7 +91,59 @@ void IoAdcNode::setupSuspensionReaders()
     suspension1Conf.zAdcPort = adcPort;
 
     suspenionReader1 = std::unique_ptr<SuspensionReader>( new SuspensionReader(suspension1Conf, "suspension_1_back_right"));
+    return true;
 }
+
+bool IoAdcNode::setupCurrentReaders()
+{
+    ros::NodeHandle privateNodehandle("~");
+
+    CurrentReaderConf conf;
+
+    vector<string> current_sensors;
+
+    current_sensors = privateNodehandle.param("current_sensors", current_sensors);
+
+    if(current_sensors.empty()) {
+      ROS_INFO("No current sensor specified");
+    } else {
+      for(const string name : current_sensors) {
+        ROS_INFO("Setting up current sensor '%s'", name.c_str());
+        auto getParamOrError = [&](string name, auto& out) -> bool {
+          if(!privateNodehandle.hasParam(name)) {
+            ROS_ERROR("Error: the param '%s' was not found. Check if present and type", name.c_str());
+            return false;
+          }
+          privateNodehandle.param(name, out, out);
+          return true;
+        };
+        CurrentReaderConf conf;
+        conf.name = name;
+        if(!getParamOrError(Td::toString(name,"_port"), conf.port)) return false;
+        if(!getParamOrError(Td::toString(name,"_v_to_amp_factor"), conf.vToAmpFactor)) return false;
+        if(!getParamOrError(Td::toString(name,"_zero_offset"), conf. zeroOffset)) return false;
+
+        if(privateNodehandle.hasParam(name+"_volt_range")) {
+          string rangeStr;
+          try {
+            rangeStr = privateNodehandle.param<string>(Td::toString(name,"_volt_range"), rangeStr);
+            conf.portVoltRange = voltageRangeToEnum(rangeStr, RangeType::bipolar);
+          } catch(std::runtime_error& e) {
+            ROS_ERROR("the value '%s' is not a valid voltage range", rangeStr.c_str());
+            return false;
+          }
+
+        } else {
+          ROS_ERROR("the param '%s' was not found. Check if present and type", Td::toString(name, "_volt_range").c_str());
+          return false;
+        }
+        currentReader.addConfiguration(conf);
+      }
+    }
+
+    return true;
+}
+
 
 void IoAdcNode::run()
 {
@@ -114,6 +179,20 @@ void IoAdcNode::publishSuspension(SuspensionValue suspensionValue1)
     msg.z1 = suspensionValue1.z;
 
 //     suspensionPublisher.publish(msg);
+}
+
+bool IoAdcNode::setEnableSuspensionPowerCallback(OnOffService::Request& req, OnOffService::Response& res)
+{
+    ros::NodeHandle privateNodehandle("~");
+    int tepEnablePort; // TEP DC-DC converter enable port on IO card.
+    privateNodehandle.param("suspension_power_enable_port", tepEnablePort, 4);
+
+    uint16_t err;
+    if((err = DO_WriteLine(ioCard, 0, tepEnablePort, req.on)) != NoError) {
+      ROS_ERROR("Unable to write on IO card line %d", tepEnablePort);
+    } else {
+      ROS_INFO("Suspension power enabled=%d", req.on);
+    }
 }
 
 int main(int argc, char** argv) {

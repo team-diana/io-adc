@@ -1,8 +1,9 @@
 <launch>
   <node name="io_adc" pkg="io_adc" type="io_adc" output="screen" cwd="node" args="">
     <param name="sleep_time_ms" value="100"/>
+    <param name="suspension_power_enable_port" value="4"/>
     <param name="unipolar" type="bool" value="1"/>
     <param name="adc_mode" type="string" value="localGND"/>
-    <rosparam command="load" file="temp_sensor_calibration_motor.yaml" />
+    <rosparam command="load" file="/home/diana/software/io-adc-workspace/devel/lib/temp_sensor_calibration_motor.yaml" />
   </node>
 </launch>

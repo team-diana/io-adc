@@ -2,15 +2,17 @@ cmake_minimum_required(VERSION 2.8.3)
 project(io_adc)
 
 include(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
-CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
-if(COMPILER_SUPPORTS_CXX11)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-elseif(COMPILER_SUPPORTS_CXX0X)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+CHECK_CXX_COMPILER_FLAG("-std=c++14" COMPILER_SUPPORTS_CXX14)
+CHECK_CXX_COMPILER_FLAG("-std=c++1y" COMPILER_SUPPORTS_CXX1Y)
+if(COMPILER_SUPPORTS_CXX14)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+elseif(COMPILER_SUPPORTS_CXX1Y)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y")
 else()
-  message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
+  message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++14 support. Please use a different C++ compiler.")
 endif()
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
 find_package(PythonInterp)
 find_package(PythonLibs REQUIRED)
@@ -35,7 +37,7 @@ add_message_files(
 
 add_service_files(
   FILES
-  movingService.srv
+  OnOffService.srv
 )
 
 generate_messages(
@@ -63,6 +65,7 @@ add_executable(io_adc
   src/io_adc_node.cpp
   src/suspension_reader.cpp
   src/motor_temp_sensor_reader.cpp
+  src/current_reader.cpp
 )
 
 # NOTE: ${PYTHON_LIBRARY} is not need for the executable, but it avoids meaningless linker errors.

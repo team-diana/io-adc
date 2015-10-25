@@ -9,8 +9,8 @@ using namespace io_adc;
 uint16_t SuspensionReader::suspensionRangeVolt = AD_B_2_5_V;
 
 SuspensionReader::SuspensionReader(SuspensionPortConf suspensionPortConf, const std::string& name) :
-portConf(suspensionPortConf),
-name(name)
+name(name),
+portConf(suspensionPortConf)
 {
 
 }

@@ -12,11 +12,7 @@ using namespace io_adc;
 
 IoScopeNode::IoScopeNode() : nodeHandle("io_scope")
 {
-  uint32_t i = 0;
   scopePublisher = nodeHandle.advertise<io_adc::io_scope>("io_scope", 100);
-//   ros::NodeHandle private_node_handle("~");
-//   private_node_handle.param(Td::toString("voltage_range_", i), voltageRange, 2.5);
-//   private_node_handle.param(Td::toString("voltage_range_", i, "_unipolar"), unipolar, false);
 }
 
 IoScopeNode::~IoScopeNode()
@@ -29,8 +25,6 @@ IoScopeNode::~IoScopeNode()
 
 bool IoScopeNode::init()
 {
-    uint16_t err;
-
     ROS_INFO("Init PCI_7432");
 
     if ((ioCard = Register_Card(PCI_7432, 0)) < 0) {
@@ -51,6 +45,7 @@ void IoScopeNode::run()
   while(ros::ok()) {
 
     // Note, actually it is supposed to be uint32_t, but the library has an error
+    // Check U32 definition by the library
     uint64_t portValue;
     uint16_t err;
     if((err = DO_ReadPort(ioCard, 0, &portValue)) != NoError) {
