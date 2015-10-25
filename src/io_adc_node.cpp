@@ -137,7 +137,7 @@ bool IoAdcNode::setupCurrentReaders()
           ROS_ERROR("the param '%s' was not found. Check if present and type", Td::toString(name, "_volt_range").c_str());
           return false;
         }
-        currentReader.addConfiguration(conf);
+        currentReader.addConfiguration(nodeHandle, conf);
       }
     }
 
@@ -153,6 +153,7 @@ void IoAdcNode::run()
         updateSuspensions();
         motorTempSensor.readNewValues(adcCard);
         motorTempSensor.publishNewValues();
+        currentReader.update(adcCard);
         std::this_thread::sleep_for(sleepTime);
         ros::spinOnce();
     }
@@ -190,9 +191,11 @@ bool IoAdcNode::setEnableSuspensionPowerCallback(OnOffService::Request& req, OnO
     uint16_t err;
     if((err = DO_WriteLine(ioCard, 0, tepEnablePort, req.on)) != NoError) {
       ROS_ERROR("Unable to write on IO card line %d", tepEnablePort);
+      return false;
     } else {
       ROS_INFO("Suspension power enabled=%d", req.on);
     }
+    return true;
 }
 
 int main(int argc, char** argv) {

@@ -2,6 +2,10 @@
 #include "io_adc/utils.hpp"
 #include "io_adc/dask.h"
 
+#include "std_msgs/Float32.h"
+
+#include "team_diana_lib/strings/strings.h"
+
 #include <algorithm>
 
 using namespace io_adc;
@@ -20,13 +24,19 @@ void CurrentReader::update(int adc_card)
       log_input_error_adc(conf.second.port, "while reading voltage for current " + conf.first, err);
       return;
     }
-    lastCurrentValues[conf.first] = (valueRaw - conf.second.zeroOffset) * conf.second.vToAmpFactor;
+    float value = (valueRaw - conf.second.zeroOffset) * conf.second.vToAmpFactor;
+    lastCurrentValues[conf.first] = value;
+    std_msgs::Float32 m;
+    m.data = value;
+    currentPublishers[conf.first].publish(m);
   }
 }
 
-void CurrentReader::addConfiguration(CurrentReaderConf conf)
+void CurrentReader::addConfiguration(ros::NodeHandle& nodeHandle, CurrentReaderConf conf)
 {
   configurations[conf.name] = conf;
+  currentPublishers[conf.name] = nodeHandle.advertise<std_msgs::Float32>(
+      Td::toString(conf.name, "_current").c_str(), 100);
 }
 
 map<std::string, float> CurrentReader::getValues()
